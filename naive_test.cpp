@@ -28,13 +28,13 @@ using  namespace std;
 
 int main(int argc, char **argv) {
 
-    size_t d_v = 3;
+//    size_t d_v = 3;
     string dataset_name;
     int d_low_c;
-    if (argc == 4) {
-        d_v = atoi(argv[1]);
-        dataset_name = argv[2];
-        d_low_c = atoi(argv[3]);
+    if (argc == 3) {
+//        d_v = atoi(argv[1]);
+        dataset_name = argv[1];
+        d_low_c = atoi(argv[2]);
     } else {
         cout << " Need to specify parameters" << endl;
         return 1;
