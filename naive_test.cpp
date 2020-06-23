@@ -32,7 +32,6 @@ int main(int argc, char **argv) {
     string dataset_name;
     int d_low_c;
     if (argc == 3) {
-//        d_v = atoi(argv[1]);
         dataset_name = argv[1];
         d_low_c = atoi(argv[2]);
     } else {
@@ -45,6 +44,7 @@ int main(int argc, char **argv) {
     int d_c = 128;
     string hnsw_name = string("");
     vector<int> efs(0);
+
     if (dataset_name == string("sift")) {
         dataset_name = string("sift");
         efs.push_back(100);
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 
     string path_data = string("/mnt/data/shekhale/data/") + dataset_name + string("/") + dataset_name;
     string path_models = string("/mnt/data/shekhale/models/nns_graphs/") + dataset_name;
-    string net_style = string("triplet");
+    string net_style = string("naive_triplet");
 
     string dir_d = path_data + string("_base") + string(".fvecs");
     const char *database_dir = dir_d.c_str();  // path to data
