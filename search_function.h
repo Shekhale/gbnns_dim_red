@@ -328,7 +328,6 @@ void get_real_tests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs,
     }
 
     uint32_t hops_bound = 11;
-//    int knn_size = FindGraphAverageDegree(main_graph);
 
     for (int i=0; i < efs.size(); ++i) {
         get_one_test(main_graph, kl, db, queries, db_low, queries_low, truth, n, d, d_low, n_q, n_tr, efs[i], 1,

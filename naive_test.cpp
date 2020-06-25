@@ -41,29 +41,29 @@ int main(int argc, char **argv) {
     int knn_size = 25;
     int n_q_c = 10000;
     int d_c = 128;
-    string hnsw_name = string("");
+    string hnsw_name = "";
     vector<int> efs;
 
-    if (dataset_name == string("sift")) {
+    if (dataset_name == "sift") {
         vector<int> efs_c{40, 60, 80, 100, 120, 140, 160};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
-        hnsw_name = string("M18_ef2000_onelevel1");
-    } else if (dataset_name == string("gist")) {
+        hnsw_name = "M18_ef2000_onelevel1";
+    } else if (dataset_name == "gist") {
         vector<int> efs_c{200, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         n_q_c = 1000;
         d_c = 960;
-        hnsw_name = string("M18_ef1000_onelevel1");
-    } else if (dataset_name == string("glove")) {
+        hnsw_name = "M18_ef1000_onelevel1";
+    } else if (dataset_name == "glove") {
         vector<int> efs_c{300, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         d_c = 300;
-        hnsw_name = string("M20_ef2000");
-    } else if (dataset_name == string("deep")) {
+        hnsw_name = "M20_ef2000";
+    } else if (dataset_name == "deep") {
         vector<int> efs_c{40, 80, 120, 160, 200};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         d_c = 96;
-        hnsw_name = string("M16_ef500_onelevel1");
+        hnsw_name = "M16_ef500_onelevel1";
     } else {
         cout << " Need to specify parameters for dataset" << endl;
         return 1;
@@ -78,6 +78,7 @@ int main(int argc, char **argv) {
     const size_t kl_size = 15; // KL graph size
 
     L2Metric l2 = L2Metric();
+    Angular ang = Angular();
 
     cout << "d = " << d << ", kl_size = " << kl_size << ", knn_size = " << knn_size <<  endl;
 
@@ -85,37 +86,37 @@ int main(int argc, char **argv) {
     std::random_device device;
     random_gen.seed(device());
 
-    string path_data = string("/mnt/data/shekhale/data/") + dataset_name + string("/") + dataset_name;
-    string path_models = string("/mnt/data/shekhale/models/nns_graphs/") + dataset_name;
-    string net_style = string("naive_triplet");
+    string path_data = "/mnt/data/shekhale/data/" + dataset_name + "/" + dataset_name;
+    string path_models = "/mnt/data/shekhale/models/nns_graphs/" + dataset_name;
+    string net_style = "naive_triplet";
 
-    string dir_d = path_data + string("_base") + string(".fvecs");
+    string dir_d = path_data + "_base.fvecs";
     const char *database_dir = dir_d.c_str();  // path to data
-    string dir_q = path_data + string("_query") + string(".fvecs");
+    string dir_q = path_data + "_query.fvecs";
     const char *query_dir = dir_q.c_str();  // path to data
-    string dir_t = path_data + string("_groundtruth") + string(".ivecs");
+    string dir_t = path_data + "_groundtruth.ivecs";
     const char *truth_dir = dir_t.c_str();  // path to data
 
-    string data_low_dir_s = path_data + string("_base_") + net_style + string(".fvecs");
+    string data_low_dir_s = path_data + "_base_" + net_style + ".fvecs";
     const char *database_low_dir = data_low_dir_s.c_str();
-    string query_low_dir_s = path_data + string("_query_") + net_style + string(".fvecs");
+    string query_low_dir_s = path_data + "_query_" + net_style + ".fvecs";
     const char *query_low_dir = query_low_dir_s.c_str();
 
 
-    string dir_knn = path_models + string("/knn_1k.ivecs");
+    string dir_knn = path_models + "/knn_1k.ivecs";
     const char *edge_knn_dir = dir_knn.c_str();
-    string dir_knn_low = path_models + string("/knn_lat_1k_") + net_style + string(".ivecs");
+    string dir_knn_low = path_models + "/knn_lat_1k_" + net_style + ".ivecs";
     const char *edge_knn_low_dir = dir_knn_low.c_str();
 
-    string dir_kl = path_models + string("/kl_sqrt_style.ivecs");
+    string dir_kl = path_models + "/kl_sqrt_style.ivecs";
     const char *edge_kl_dir = dir_kl.c_str();
-    string dir_kl_low = path_models + string("/kl_lat_sqrt_style.ivecs");
+    string dir_kl_low = path_models + "/kl_lat_sqrt_style.ivecs";
     const char *edge_kl_low_dir = dir_kl_low.c_str();
 
-    string edge_hnsw_dir_s = path_models + string("/hnsw_") +  hnsw_name + string(".ivecs");
+    string edge_hnsw_dir_s = path_models + "/hnsw_" +  hnsw_name + ".ivecs";
     const char *edge_hnsw_dir = edge_hnsw_dir_s.c_str();
 
-    string output = string("results/naive_triplet_") + dataset_name + string(".txt");
+    string output = "results/naive_triplet_" + dataset_name + ".txt";
     const char *output_txt = output.c_str();
 
     remove(output_txt);
@@ -190,11 +191,18 @@ int main(int argc, char **argv) {
     hnsw = load_edges(edge_hnsw_dir, hnsw);
     cout << "hnsw " << FindGraphAverageDegree(hnsw) << endl;
 
-	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &l2, "knn", false, false, 1);
-	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &l2, "hnsw", false, false, 1);
-	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &l2, "knn_kl", true, true, 1);
-	get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &l2, "knn_kl_low", true, true, 1);
+    if (dataset_name == "glove" or d % 8 != 0) {
+        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &ang, "knn", false, false, 1);
+        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &ang, "hnsw", false, false, 1);
+        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &ang, "knn_kl", true, true, 1);
+        get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &ang, "knn_kl_low", true, true, 1);
+    } else {
+        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &l2, "knn", false, false, 1);
+        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &l2, "hnsw", false, false, 1);
+        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &l2, "knn_kl", true, true, 1);
+        get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &l2, "knn_kl_low", true, true, 1);
 
+    }
 
 
     return 0;
