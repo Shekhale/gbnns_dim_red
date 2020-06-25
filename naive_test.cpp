@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
         d_c = 300;
         hnsw_name = string("M20_ef2000");
     } else if (dataset_name == string("deep")) {
-        vector<int> efs_n{40, 80, 120, 160, 200};
+        vector<int> efs_c{40, 80, 120, 160, 200};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         d_c = 96;
         hnsw_name = string("M16_ef500_onelevel1");
