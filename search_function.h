@@ -130,13 +130,35 @@ triple_result search(const float *query, const float* db, uint32_t N, uint32_t d
 }
 
 
+int GetRealNearest(const float* point_q, int k, int d, int d_low, priority_queue<pair<float, int > > &topk,
+                    vector<float> &ds,
+                    Metric *metric) {
+
+    const float* point_i = ds.data() + d * topk.top().second;
+    float min_dist = metric->Dist(point_i, point_q, d);
+    int real_topk = topk.top().second;
+    topk.pop();
+    float dist;
+    while (!topk.empty()) {
+        point_i = ds.data() + d * topk.top().second;
+        dist = metric->Dist(point_i, point_q, d);
+        if (dist < min_dist) {
+            min_dist = dist;
+            real_topk = topk.top().second;
+        }
+        topk.pop();
+    }
+
+    return real_topk;
+}
+
 void get_one_test(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> > &kl_graph,
-                  vector<float> &db, vector<float> &queries,
+                  vector<float> &ds, vector<float> &queries, vector<float> &ds_low, vector<float> &queries_low,
                   vector<uint32_t> &truth,
-                  int n, int d, int n_q, int n_tr, int ef, int k, string graph_name,
+                  int n, int d, int d_low, int n_q, int n_tr, int ef, int k, string graph_name,
                   Metric *metric, const char* output_txt,
                   vector<vector<uint32_t> > inter_points, bool use_second_graph, bool llf, uint32_t hops_bound, int dist_calc_boost,
-                  int recheck_size, int number_exper) {
+                  int recheck_size, int number_exper, int number_of_threads) {
 
     std::ofstream outfile;
     outfile.open(output_txt, std::ios_base::app);
@@ -149,23 +171,42 @@ void get_one_test(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> 
     float work_time = 0;
     int num_exp = 0;
 
+    omp_set_num_threads(number_of_threads);
     for (int v = 0; v < number_exper; ++v) {
         num_exp += 1;
         vector<int> ans(n_q);
         StopW stopw = StopW();
-
 #pragma omp parallel for
         for (int i = 0; i < n_q; ++i) {
 
             triple_result tr;
             const float* point_q = queries.data() + i * d;
-            tr = search(point_q, db.data(), n, d, knn_graph, kl_graph, ef,
+            const float* point_q_low = queries_low.data() + i * d_low;
+            if (d != d_low) {
+				if (recheck_size > 0) {
+	                tr = search(point_q_low, ds_low.data(), n, d_low, knn_graph, kl_graph, recheck_size,
+	                            recheck_size, inter_points[i], metric, visitedlistpool, use_second_graph, llf, hops_bound);
+	                ans[i] = GetRealNearest(point_q, k, d, d_low, tr.topk, ds, metric);
+	                dist_calc += recheck_size;
+				} else {
+					tr = search(point_q_low, ds_low.data(), n, d_low, knn_graph, kl_graph, ef,
+	                            k, inter_points[i], metric, visitedlistpool, use_second_graph, llf, hops_bound);
+
+	                while (tr.topk.size() > k) {
+	                    tr.topk.pop();
+	                }
+	                ans[i] = tr.topk.top().second;
+				}
+            } else {
+                tr = search(point_q, ds.data(), n, d, knn_graph, kl_graph, ef,
                             k, inter_points[i], metric, visitedlistpool, use_second_graph, llf, hops_bound);
 
-            while (tr.topk.size() > k) {
+                while (tr.topk.size() > k) {
                     tr.topk.pop();
+                }
+                ans[i] = tr.topk.top().second;
             }
-            ans[i] = tr.topk.top().second;
+
             hops += tr.hops;
             dist_calc += tr.dist_calc;
         }
@@ -260,8 +301,8 @@ void get_synthetic_tests(int n, int d, int n_q, int n_tr, std::mt19937 random_ge
         vector< vector <uint32_t>> knn_cur = CutKNNbyK(knn, db, k_coeff[i], n, d, metric);
 
 //        cout << "ef = " << ef_coeff[i] << ", recheck = " << recheck_size << endl;
-        get_one_test(knn_cur, kl, db, queries, truth, n, d, n_q, n_tr, ef_coeff[i], 1,
-                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, recheck_size, 1);
+        get_one_test(knn_cur, kl, db, queries, db, queries, truth, n, d, d, n_q, n_tr, ef_coeff[i], 1,
+                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, recheck_size, 1, omp_get_max_threads());
     }
 
 }
@@ -290,8 +331,8 @@ void get_real_tests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs,
 //    int knn_size = FindGraphAverageDegree(main_graph);
 
     for (int i=0; i < efs.size(); ++i) {
-        get_one_test(main_graph, kl, db, queries, truth, n, d, n_q, n_tr, efs[i], 1,
-                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, efs[i], 10);
+        get_one_test(main_graph, kl, db, queries, db_low, queries_low, truth, n, d, d_low, n_q, n_tr, efs[i], 1,
+                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, efs[i], 10, 1);
     }
 
 }

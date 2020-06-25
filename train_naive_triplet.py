@@ -320,6 +320,7 @@ if __name__ == '__main__':
 
         k_nn_latent = get_nearestneighbors_partly(yb, yb, 1000, args.device, bs=3*10**5, needs_exact=True)
         write_ivecs("/mnt/data/shekhale/models/nns_graphs/" + args.database + "/knn_lat_1k_" + name_for_c + ".ivecs", k_nn_latent)
+
         save_transform(xb, net, args.database + "/" + args.database + "_base_" + name_for_c + ".fvecs", args.device)
         save_transform(xq, net, args.database + "/" + args.database + "_query_" + name_for_c + ".fvecs", args.device)
 

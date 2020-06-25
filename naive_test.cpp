@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
     vector< vector <uint32_t>> knn_low(n);
     knn_low = load_edges(edge_knn_low_dir, knn_low);
     knn_low = CutKNNbyK(knn_low, db_low, knn_size, n, d_low, &l2);
-    cout << "knn_low" << FindGraphAverageDegree(knn_low) << endl;
+    cout << "knn_low " << FindGraphAverageDegree(knn_low) << endl;
 
     bool kl_exist = FileExist(dir_kl);
     if (kl_exist != true) {
