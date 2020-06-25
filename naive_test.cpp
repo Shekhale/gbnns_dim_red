@@ -46,22 +46,22 @@ int main(int argc, char **argv) {
 
     if (dataset_name == string("sift")) {
         vector<int> efs_c{40, 60, 80, 100, 120};
-        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
+        efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         hnsw_name = string("M18_ef2000_onelevel1");
     } else if (dataset_name == string("gist")) {
         vector<int> efs_c{200, 400, 600, 800, 1000};
-        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
+        efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         n_q_c = 1000;
         d_c = 960;
         hnsw_name = string("M18_ef1000_onelevel1");
     } else if (dataset_name == string("glove")) {
         vector<int> efs_c{300, 400, 600, 800, 1000};
-        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
+        efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         d_c = 300;
         hnsw_name = string("M20_ef2000");
     } else if (dataset_name == string("deep")) {
         vector<int> efs_n{40, 80, 120, 160, 200};
-        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
+        efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         d_c = 96;
         hnsw_name = string("M16_ef500_onelevel1");
     } else {
