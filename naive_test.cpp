@@ -43,25 +43,34 @@ int main(int argc, char **argv) {
     int d_c = 128;
     string hnsw_name = "";
     vector<int> efs;
+    vector<int> efs_hnsw;
 
     if (dataset_name == "sift") {
         vector<int> efs_c{40, 60, 80, 100, 120, 140, 160};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
+        vector<int> efs_hnsw_c{10, 20, 30, 40, 60, 80, 100};
+        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         hnsw_name = "M18_ef2000_onelevel1";
     } else if (dataset_name == "gist") {
         vector<int> efs_c{200, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
+        vector<int> efs_hnsw_c{200, 400, 600, 800, 1000};
+        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         n_q_c = 1000;
         d_c = 960;
         hnsw_name = "M18_ef1000_onelevel1";
     } else if (dataset_name == "glove") {
         vector<int> efs_c{300, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
+        vector<int> efs_hnsw_c{200, 400, 600, 800, 1000};
+        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         d_c = 300;
         hnsw_name = "M20_ef2000";
     } else if (dataset_name == "deep") {
         vector<int> efs_c{40, 80, 120, 160, 200};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
+        vector<int> efs_hnsw_c{40, 80, 120, 160, 200};
+        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         d_c = 96;
         hnsw_name = "M16_ef500_onelevel1";
     } else {
@@ -193,17 +202,15 @@ int main(int argc, char **argv) {
 
     if (dataset_name == "glove" or d % 8 != 0) {
         get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &ang, "knn", false, false, 1);
-        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &ang, "hnsw", false, false, 1);
+        get_real_tests(n, d, d, n_q, n_tr, efs_hnsw, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &ang, "hnsw", false, false, 1);
         get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &ang, "knn_kl", true, true, 1);
         get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &ang, "knn_kl_low", true, true, 1);
     } else {
         get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &l2, "knn", false, false, 1);
-        get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &l2, "hnsw", false, false, 1);
+        get_real_tests(n, d, d, n_q, n_tr, efs_hnsw, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &l2, "hnsw", false, false, 1);
         get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &l2, "knn_kl", true, true, 1);
         get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &l2, "knn_kl_low", true, true, 1);
-
     }
-
 
     return 0;
 

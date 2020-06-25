@@ -251,6 +251,10 @@ if __name__ == '__main__':
     xv = xb[perm[:threshold]]
     xt = xb
 
+    for i in range(3):
+        x_var = torch.from_numpy(xb[i]).to(args.device)
+        print(x_var.norm(dim=-1, keepdim=True))
+
     print(xb[0][:10])
 
     xv = normalize_numpy(xv, args)
@@ -269,7 +273,6 @@ if __name__ == '__main__':
     xv = sanitize(xv)
     xb = sanitize(xb)
     xq = sanitize(xq)
-
 
     print(xb[0][:10])
 
