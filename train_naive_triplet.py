@@ -264,10 +264,17 @@ if __name__ == '__main__':
 
     print(xb[0][:10])
 
+    if dim > 512:
+        xb = np.around(xb, 4)
+        xt = np.around(xv, 4)
+        xv = np.around(xv, 4)
+        xq = np.around(xq, 4)
+
+    print(xb[0][:10])
+
     print(xb.shape)
     print(xt.shape)
     print(xv.shape)
-
 
     xt = sanitize(xt)
     xv = sanitize(xv)
