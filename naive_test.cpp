@@ -43,24 +43,26 @@ int main(int argc, char **argv) {
     int n_q_c = 10000;
     int d_c = 128;
     string hnsw_name = string("");
-    vector<int> efs(0);
+    vector<int> efs;
 
     if (dataset_name == string("sift")) {
-        efs.push_back(100);
+        vector<int> efs_c{40, 60, 80, 100, 120};
+        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
         hnsw_name = string("M18_ef2000_onelevel1");
     } else if (dataset_name == string("gist")) {
-        efs.push_back(250);
-        efs.push_back(500);
+        vector<int> efs_c{200, 400, 600, 800, 1000};
+        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
         n_q_c = 1000;
         d_c = 960;
         hnsw_name = string("M18_ef1000_onelevel1");
     } else if (dataset_name == string("glove")) {
-        efs.push_back(500);
+        vector<int> efs_c{300, 400, 600, 800, 1000};
+        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
         d_c = 300;
         hnsw_name = string("M20_ef2000");
     } else if (dataset_name == string("deep")) {
-        efs.push_back(100);
-        efs.push_back(150);
+        vector<int> efs_n{40, 80, 120, 160, 200};
+        efs.insert(efs.end(), efs_n.begin(), efs_n.end());
         d_c = 96;
         hnsw_name = string("M16_ef500_onelevel1");
     } else {
@@ -114,7 +116,7 @@ int main(int argc, char **argv) {
     string edge_hnsw_dir_s = path_models + string("/hnsw_") +  hnsw_name + string(".ivecs");
     const char *edge_hnsw_dir = edge_hnsw_dir_s.c_str();
 
-    string output = string("results/naive_test_real_data_") + dataset_name + string(".txt");
+    string output = string("results/naive_triplet_") + dataset_name + string(".txt");
     const char *output_txt = output.c_str();
 
     remove(output_txt);
@@ -192,7 +194,7 @@ int main(int argc, char **argv) {
 	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &l2, "knn", false, false);
 	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &l2, "hnsw", false, false);
 	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &l2, "knn_kl", true, true);
-	get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &l2, "knn_kl_lat", true, true);
+	get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &l2, "knn_kl_low", true, true);
 
 
 

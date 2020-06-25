@@ -192,8 +192,8 @@ if __name__ == '__main__':
        help="weight of the uniformity loss")
 
     group = parser.add_argument_group('Training hyperparameters')
-    aa("--batch_size", type=int, default=64)
-    aa("--epochs", type=int, default=160)
+    aa("--batch_size", type=int, default=256)
+    aa("--epochs", type=int, default=40)
     aa("--momentum", type=float, default=0.9)
     aa("--rank_positive", type=int, default=10,
        help="this number of vectors are considered positives")
@@ -217,9 +217,6 @@ if __name__ == '__main__':
     aa("--validation_quantizers", type=str, default="",
        help="r2 values to try in validation")
     aa("--print_results", type=int, default=0)
-    aa("--save", type=str, default="not")
-    aa("--net_for_query", type=int, default=0)
-    aa("--full", type=int, default=0)
 
 
     args = parser.parse_args()
