@@ -28,7 +28,6 @@ using  namespace std;
 
 int main(int argc, char **argv) {
 
-//    size_t d_v = 3;
     string dataset_name;
     int d_low_c;
     if (argc == 3) {
