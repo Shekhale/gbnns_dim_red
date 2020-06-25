@@ -251,26 +251,16 @@ if __name__ == '__main__':
     xv = xb[perm[:threshold]]
     xt = xb
 
-    for i in range(3):
-        x_var = torch.from_numpy(xb[i]).to(args.device)
-        print(x_var.norm(dim=-1, keepdim=True))
-
-    print(xb[0][:10])
-
     xv = normalize_numpy(xv, args)
     xt = normalize_numpy(xt, args)
     xb = normalize_numpy(xb, args)
     xq = normalize_numpy(xq, args)
 
-    print(xb[0][:10])
-
     if dim > 512:
         xb = np.around(xb, 4)
-        xt = np.around(xv, 4)
+        xt = np.around(xt, 4)
         xv = np.around(xv, 4)
         xq = np.around(xq, 4)
-
-    print(xb[0][:10])
 
     print(xb.shape)
     print(xt.shape)
@@ -280,8 +270,6 @@ if __name__ == '__main__':
     xv = sanitize(xv)
     xb = sanitize(xb)
     xq = sanitize(xq)
-
-    print(xb[0][:10])
 
     print ("computing training ground truth")
     xt_gt = get_nearestneighbors_partly(xt, xt, r_pos, device=args.device, bs=10**5, needs_exact=True)
