@@ -9,6 +9,8 @@ import torch.nn.functional as F
 import torch
 import itertools
 
+from sys import getsizeof
+
 # import multiprocessing
 # cpus = multiprocessing.cpu_count()
 # import ray
@@ -255,14 +257,14 @@ if __name__ == '__main__':
         x_var = torch.from_numpy(xb[i]).to(args.device)
         print(x_var.norm(dim=-1, keepdim=True))
 
-    print(xb[0][:10])
+    print(xb[0][:10], getsizeof(xb[0][0]))
 
     xv = normalize_numpy(xv, args)
     xt = normalize_numpy(xt, args)
     xb = normalize_numpy(xb, args)
     xq = normalize_numpy(xq, args)
 
-    print(xb[0][:10])
+    print(xb[0][:10], getsizeof(xb[0][0]))
 
     if dim > 512:
         xb = np.around(xb, 4)
@@ -270,7 +272,7 @@ if __name__ == '__main__':
         xv = np.around(xv, 4)
         xq = np.around(xq, 4)
 
-    print(xb[0][:10])
+    print(xb[0][:10], getsizeof(xb[0][0]))
 
     print(xb.shape)
     print(xt.shape)
@@ -281,7 +283,7 @@ if __name__ == '__main__':
     xb = sanitize(xb)
     xq = sanitize(xq)
 
-    print(xb[0][:10])
+    print(xb[0][:10], getsizeof(xb[0][0]))
 
     print ("computing training ground truth")
     xt_gt = get_nearestneighbors_partly(xt, xt, r_pos, device=args.device, bs=10**5, needs_exact=True)
