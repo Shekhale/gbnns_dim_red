@@ -251,16 +251,16 @@ if __name__ == '__main__':
     xv = xb[perm[:threshold]]
     xt = xb
 
-    xv = normalize_numpy(xv, args)
-    xt = normalize_numpy(xt, args)
-    xb = normalize_numpy(xb, args)
-    xq = normalize_numpy(xq, args)
-
-    if dim > 512:
-        xb = np.around(xb, 4)
-        xt = np.around(xt, 4)
-        xv = np.around(xv, 4)
-        xq = np.around(xq, 4)
+    # xv = normalize_numpy(xv, args)
+    # xt = normalize_numpy(xt, args)
+    # xb = normalize_numpy(xb, args)
+    # xq = normalize_numpy(xq, args)
+    #
+    # if dim > 512:
+    #     xb = np.around(xb, 4)
+    #     xt = np.around(xt, 4)
+    #     xv = np.around(xv, 4)
+    #     xq = np.around(xq, 4)
 
     print(xb.shape)
     print(xt.shape)
