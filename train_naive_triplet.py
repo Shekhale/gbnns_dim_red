@@ -249,10 +249,7 @@ if __name__ == '__main__':
     threshold = int(base_size * 0.1)
     perm = np.random.permutation(base_size)
     xv = xb[perm[:threshold]]
-    if args.full > 0:
-        xt = xb
-    else:
-        xt = xb[perm[threshold:]]
+    xt = xb
 
 
     xv = normalize_numpy(xv, args)
