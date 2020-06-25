@@ -9,8 +9,6 @@ import torch.nn.functional as F
 import torch
 import itertools
 
-from sys import getsizeof
-
 # import multiprocessing
 # cpus = multiprocessing.cpu_count()
 # import ray
@@ -248,42 +246,20 @@ if __name__ == '__main__':
 
     base_size = xb.shape[0]
     dim = xb.shape[1]
-    threshold = int(base_size * 0.1)
-    perm = np.random.permutation(base_size)
-    xv = xb[perm[:threshold]]
     xt = xb
 
-    for i in range(3):
-        x_var = torch.from_numpy(xb[i]).to(args.device)
-        print(x_var.norm(dim=-1, keepdim=True))
-
-    print(xb[0][:10], getsizeof(xb[0][0]))
-
-    xv = normalize_numpy(xv, args)
-    xt = normalize_numpy(xt, args)
-    xb = normalize_numpy(xb, args)
-    xq = normalize_numpy(xq, args)
-
-    print(xb[0][:10], getsizeof(xb[0][0]))
-
-    if dim > 512:
-        xb = np.around(xb, 4)
-        xt = np.around(xt, 4)
-        xv = np.around(xv, 4)
-        xq = np.around(xq, 4)
-
-    print(xb[0][:10], getsizeof(xb[0][0]))
+    # GIST does not normalized
+    if args.database != "gist":
+        xt = normalize_numpy(xt, args)
+        xb = normalize_numpy(xb, args)
+        xq = normalize_numpy(xq, args)
 
     print(xb.shape)
     print(xt.shape)
-    print(xv.shape)
 
     xt = sanitize(xt)
-    xv = sanitize(xv)
     xb = sanitize(xb)
     xq = sanitize(xq)
-
-    print(xb[0][:10], getsizeof(xb[0][0]))
 
     print ("computing training ground truth")
     xt_gt = get_nearestneighbors_partly(xt, xt, r_pos, device=args.device, bs=10**5, needs_exact=True)
@@ -305,7 +281,7 @@ if __name__ == '__main__':
     net.to(args.device)
 
     val_k = 2 * args.dout
-    all_logs = triplet_optimize(xt, xv, xt_gt, xq, gt, net, args, lam, r_pos, r_neg, val_k, 0)
+    all_logs = triplet_optimize(xt, xt, xt_gt, xq, gt, net, args, lam, r_pos, r_neg, val_k, 0)
 
     yb = forward_pass(net, xb, 1024)
 
