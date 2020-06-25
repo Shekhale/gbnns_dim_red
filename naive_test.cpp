@@ -190,10 +190,10 @@ int main(int argc, char **argv) {
     hnsw = load_edges(edge_hnsw_dir, hnsw);
     cout << "hnsw " << FindGraphAverageDegree(hnsw) << endl;
 
-	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &l2, "knn", false, false);
-	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &l2, "hnsw", false, false);
-	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &l2, "knn_kl", true, true);
-	get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &l2, "knn_kl_low", true, true);
+	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, knn, db, queries, db, queries, truth, output_txt, &l2, "knn", false, false, 1);
+	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db, queries, truth, output_txt, &l2, "hnsw", false, false, 1);
+	get_real_tests(n, d, d, n_q, n_tr, efs, random_gen, knn, kl, db, queries, db, queries, truth, output_txt, &l2, "knn_kl", true, true, 1);
+	get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, knn_low, kl_low, db, queries, db_low, queries_low, truth, output_txt, &l2, "knn_kl_low", true, true, 1);
 
 
 

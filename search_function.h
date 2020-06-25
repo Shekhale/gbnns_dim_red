@@ -312,8 +312,8 @@ void get_synthetic_tests(int n, int d, int n_q, int n_tr, std::mt19937 random_ge
 void get_real_tests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs, std::mt19937 random_gen,
                 vector< vector<uint32_t> > &main_graph, vector< vector<uint32_t> > &kl, vector<float> &db,
                 vector<float> &queries, vector<float> &db_low, vector<float> &queries_low, vector<uint32_t> &truth,
-                const char* output_txt,
-                Metric *metric, string graph_name, bool use_second_graph, bool llf) {
+                const char* output_txt, Metric *metric,
+                string graph_name, bool use_second_graph, bool llf, int number_exper) {
 
     vector<vector<uint32_t> > inter_points(n_q);
     int inter_points_mult = 1;
@@ -332,7 +332,7 @@ void get_real_tests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs,
 
     for (int i=0; i < efs.size(); ++i) {
         get_one_test(main_graph, kl, db, queries, db_low, queries_low, truth, n, d, d_low, n_q, n_tr, efs[i], 1,
-                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, efs[i], 10, 1);
+                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, efs[i], number_exper, 1);
     }
 
 }
