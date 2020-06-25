@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     vector<int> efs;
 
     if (dataset_name == string("sift")) {
-        vector<int> efs_c{40, 60, 80, 100, 120};
+        vector<int> efs_c{40, 60, 80, 100, 120, 140, 160};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         hnsw_name = string("M18_ef2000_onelevel1");
     } else if (dataset_name == string("gist")) {
