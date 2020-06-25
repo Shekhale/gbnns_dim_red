@@ -267,8 +267,8 @@ if __name__ == '__main__':
     xq = sanitize(xq)
 
     print ("computing training ground truth")
-    # xt_gt = get_nearestneighbors_partly(xt, xt, r_pos, device=args.device, bs=10**5, needs_exact=True)
-    xt_gt = get_nearestneighbors(xt, xt, r_pos, device=args.device, needs_exact=True)
+    xt_gt = get_nearestneighbors_partly(xt, xt, r_pos, device=args.device, bs=10**5, needs_exact=True)
+    # xt_gt = get_nearestneighbors(xt, xt, r_pos, device=args.device, needs_exact=True)
     # xt_gt = get_nearestneighbors(xb, xb, r_pos, device=args.device)
 
     print ("build network")
