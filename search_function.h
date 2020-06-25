@@ -133,10 +133,10 @@ triple_result search(const float *query, const float* db, uint32_t N, uint32_t d
 void get_one_test(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> > &kl_graph,
                   vector<float> &db, vector<float> &queries,
                   vector<uint32_t> &truth,
-                  int n, int d, int n_q, int n_tr, int ef, int k, const char* g_name,
+                  int n, int d, int n_q, int n_tr, int ef, int k, string graph_name,
                   Metric *metric, const char* output_txt,
                   vector<vector<uint32_t> > inter_points, bool use_second_graph, bool llf, uint32_t hops_bound, int dist_calc_boost,
-                  int recheck_size) {
+                  int recheck_size, int number_exper) {
 
     std::ofstream outfile;
     outfile.open(output_txt, std::ios_base::app);
@@ -149,7 +149,7 @@ void get_one_test(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> 
     float work_time = 0;
     int num_exp = 0;
 
-    for (int v = 0; v < 1; ++v) {
+    for (int v = 0; v < number_exper; ++v) {
         num_exp += 1;
         vector<int> ans(n_q);
         StopW stopw = StopW();
@@ -179,9 +179,9 @@ void get_one_test(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> 
     }
 
 
-    cout << "graph_type " << g_name << " acc " << acc /  (num_exp * n_q) << " hops " << hops /  (num_exp * n_q) << " dist_calc "
+    cout << "graph_type " << graph_name << " acc " << acc /  (num_exp * n_q) << " hops " << hops /  (num_exp * n_q) << " dist_calc "
          << dist_calc /  (num_exp * n_q) << " work_time " << work_time / (num_exp * 1e6 * n_q) << endl;
-    outfile << "graph_type " << g_name << " acc " << acc /  (num_exp * n_q) << " hops " << hops /  (num_exp * n_q) << " dist_calc "
+    outfile << "graph_type " << graph_name << " acc " << acc /  (num_exp * n_q) << " hops " << hops /  (num_exp * n_q) << " dist_calc "
             << dist_calc /  (num_exp * n_q) << " work_time " << work_time / (num_exp * 1e6 * n_q) << endl;
 }
 
@@ -190,7 +190,7 @@ void get_one_test(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> 
 void get_synthetic_tests(int n, int d, int n_q, int n_tr, std::mt19937 random_gen,
                 vector< vector<uint32_t> > &knn, vector< vector<uint32_t> > &kl, vector<float> &db,
                 vector<float> &queries, vector<uint32_t> &truth, const char* output_txt,
-                Metric *metric, const char* graph_name, bool use_second_graph, bool llf, bool beam_search) {
+                Metric *metric, string graph_name, bool use_second_graph, bool llf, bool beam_search) {
 
     vector<vector<uint32_t> > inter_points(n_q);
     int num = 0;
@@ -261,7 +261,7 @@ void get_synthetic_tests(int n, int d, int n_q, int n_tr, std::mt19937 random_ge
 
 //        cout << "ef = " << ef_coeff[i] << ", recheck = " << recheck_size << endl;
         get_one_test(knn_cur, kl, db, queries, truth, n, d, n_q, n_tr, ef_coeff[i], 1,
-                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, recheck_size);
+                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, recheck_size, 1);
     }
 
 }
@@ -269,37 +269,29 @@ void get_synthetic_tests(int n, int d, int n_q, int n_tr, std::mt19937 random_ge
 
 
 void get_real_tests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs, std::mt19937 random_gen,
-                vector< vector<uint32_t> > &knn, vector< vector<uint32_t> > &kl, vector<float> &db,
+                vector< vector<uint32_t> > &main_graph, vector< vector<uint32_t> > &kl, vector<float> &db,
                 vector<float> &queries, vector<float> &db_low, vector<float> &queries_low, vector<uint32_t> &truth,
                 const char* output_txt,
-                Metric *metric, const char* graph_name, bool use_second_graph, bool llf) {
+                Metric *metric, string graph_name, bool use_second_graph, bool llf) {
 
     vector<vector<uint32_t> > inter_points(n_q);
+    int inter_points_mult = 1;
+    if (graph_name.substr(0, 4) == "hnsw") {
+        inter_points_mult = 0; // HNSW starts from 0
+    }
     int num = 0;
     uniform_int_distribution<int> uniform_distr(0, n-1);
     for (int j=0; j < n_q; ++j) {
         num = uniform_distr(random_gen);
-        inter_points[j].push_back(num);
+        inter_points[j].push_back(num * inter_points_mult);
     }
 
-
-    vector<int> ef_coeff = efs;
-    vector<int> k_coeff;
     uint32_t hops_bound = 11;
-    int recheck_size = -1;
-    int knn_size = FindGraphAverageDegree(knn);
+//    int knn_size = FindGraphAverageDegree(main_graph);
 
-
-
-    int exp_size = min(ef_coeff.size(), k_coeff.size());
-
-    for (int i=0; i < exp_size; ++i) {
-
-        vector< vector <uint32_t>> knn_cur = CutKNNbyK(knn, db, k_coeff[i], n, d, metric);
-
-//        cout << "ef = " << ef_coeff[i] << ", recheck = " << recheck_size << endl;
-        get_one_test(knn_cur, kl, db, queries, truth, n, d, n_q, n_tr, ef_coeff[i], 1,
-                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, recheck_size);
+    for (int i=0; i < efs.size(); ++i) {
+        get_one_test(main_graph, kl, db, queries, truth, n, d, n_q, n_tr, efs[i], 1,
+                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, efs[i], 10);
     }
 
 }

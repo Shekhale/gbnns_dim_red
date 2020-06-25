@@ -46,7 +46,6 @@ int main(int argc, char **argv) {
     vector<int> efs(0);
 
     if (dataset_name == string("sift")) {
-        dataset_name = string("sift");
         efs.push_back(100);
         hnsw_name = string("M18_ef2000_onelevel1");
     } else if (dataset_name == string("gist")) {
@@ -104,13 +103,13 @@ int main(int argc, char **argv) {
 
     string dir_knn = path_models + string("/knn_1k.ivecs");
     const char *edge_knn_dir = dir_knn.c_str();
-    string dir_knn_lat = path_models + string("/knn_lat_1k_") + net_style + string(".ivecs");
-    const char *edge_knn_lat_dir = dir_knn_lat.c_str();
+    string dir_knn_low = path_models + string("/knn_lat_1k_") + net_style + string(".ivecs");
+    const char *edge_knn_low_dir = dir_knn_low.c_str();
 
     string dir_kl = path_models + string("/kl_sqrt_style.ivecs");
     const char *edge_kl_dir = dir_kl.c_str();
-    string dir_kl_lat = path_models + string("/kl_lat_sqrt_style.ivecs");
-    const char *edge_kl_lat_dir = dir_kl_lat.c_str();
+    string dir_kl_low = path_models + string("/kl_lat_sqrt_style.ivecs");
+    const char *edge_kl_low_dir = dir_kl_low.c_str();
 
     string edge_hnsw_dir_s = path_models + string("/hnsw_") +  hnsw_name + string(".ivecs");
     const char *edge_hnsw_dir = edge_hnsw_dir_s.c_str();
@@ -163,19 +162,28 @@ int main(int argc, char **argv) {
     cout << "knn " << FindGraphAverageDegree(knn) << endl;
 
     vector< vector <uint32_t>> knn_low(n);
-    knn_low = load_edges(edge_knn_dir, knn_low);
+    knn_low = load_edges(edge_knn_low_dir, knn_low);
     knn_low = CutKNNbyK(knn_low, db_low, knn_size, n, d_low, &l2);
     cout << "knn_low" << FindGraphAverageDegree(knn_low) << endl;
 
+    bool kl_exist = FileExist(dir_kl);
+    if (kl_exist != true) {
+		KLgraph kl_sqrt;
+		kl_sqrt.BuildByNumberCustom(kl_size, db, n, d, pow(n, 0.5), random_gen, &l2);
+        write_edges(edge_kl_dir, kl_sqrt.longmatrixNN);
+
+		KLgraph kl_sqrt_low;
+		kl_sqrt_low.BuildByNumberCustom(kl_size, db_low, n, d_low, pow(n, 0.5), random_gen, &l2);
+        write_edges(edge_kl_low_dir, kl_sqrt_low.longmatrixNN);
+    }
 
     vector< vector <uint32_t>> kl(n);
     kl = load_edges(edge_kl_dir, kl);
     cout << "kl " << FindGraphAverageDegree(kl) << endl;
 
     vector< vector <uint32_t>> kl_low(n);
-    kl_low = load_edges(edge_kl_lat_dir, kl_low);
+    kl_low = load_edges(edge_kl_low_dir, kl_low);
     cout << "kl_low " << FindGraphAverageDegree(kl_low) << endl;
-
 
     vector< vector <uint32_t>> hnsw(n);
     hnsw = load_edges(edge_hnsw_dir, hnsw);
