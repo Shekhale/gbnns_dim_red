@@ -4,7 +4,7 @@ cpus = multiprocessing.cpu_count()
 import heapq
 import random
 
-from struct import pack, unpack
+from struct import pack
 
 try:
     import faiss
@@ -111,114 +111,6 @@ def write_edges_list(filename, edges):
             f.write(pack('i' * dim, *list(to_vertex_ids)))
 
 
-# def save_ds(ds, net, args, file_name):
-#
-#     ds = torch.from_numpy(ds).to(args.device)
-#     ds_lat = net(ds)
-#     # print(ds.shape)
-#
-#     ds_lat = ds_lat.detach().numpy()
-#     write_fvecs(file_name, ds_lat)
-
-
-def get_histogram(x, num_steps, start, device):
-    step = (1 - start) / (num_steps - 1)
-    eps = (1 - start) /  num_steps
-    # eps = (1 - start) / (2 * num_steps)
-    t = torch.arange(start, 1 + step, step).view(-1, 1)
-    tsize = t.size()[0]
-    # t.cuda()
-    t = t.to(device)
-    # print(t)
-
-    low_ind = (x < start).to(torch.bool)
-    x[low_ind] = start
-    # you can better
-    if True:
-        eq_ind = (x > 0.9999).to(torch.bool)
-        x[eq_ind] = 0.9999
-    # print(torch.sum(x))
-    # x = x.reshape(-1)
-    # y = x.reshape(-1)
-    x_rep = x.reshape(-1).repeat(tsize, 1)
-    # x_rep = y.repeat(tsize, 1)
-    # print(x_rep.shape)
-
-    x_rep_floor = (torch.floor((x_rep.data - start) / step) * step + start).float()
-    x_rep_floor.to(device)
-    # print(torch.sum(x_rep_floor))
-    # print(x_rep_floor[0, :10])
-    # t_step = torch.from_numpy(np.array(step)).to(device)
-    # t_eps = torch.from_numpy(np.array(eps)).to(device)
-    # eps.to(device)
-    indsa = (x_rep_floor - (t - step) > -eps) & (x_rep_floor - (t - step) < eps)
-    # indsa = ((x_rep_floor - (t - step) > -eps) & (x_rep_floor - (t - step) < eps)).to(torch.bool)
-
-    # print(torch.sum(indsa))
-    # indsa = (x_rep_floor - (t - t_step) > -t_eps) & (x_rep_floor - (t - t_step) < t_eps)
-    # print(indsa.dtype)
-    # zeros = torch.zeros((1, indsa.size()[1]))
-    # zeros = torch.zeros((1, indsa.size()[1]), dtype=indsa.dtype, device=device)
-    # if self.cuda:
-    # zeros = zeros.to(device)
-    # print(zeros.shape)
-    # print(indsa.shape)
-    indsbb = torch.cat((indsa, torch.zeros((1, indsa.size()[1]), dtype=indsa.dtype, device=device)), dim=0)
-    indsb = indsbb[1:, :]
-    # print(indsb.dtype)
-    x_rep[~(indsb | indsa)] = 0
-
-    # print(torch.sum(x_rep))
-    # print(x_rep.dtype)
-    # indsa corresponds to the first condition of the second equation of the paper
-    x_rep[indsa] = (x_rep - t + step)[indsa] / step
-    # indsb corresponds to the second condition of the second equation of the paper
-    x_rep[indsb] = (-x_rep + t + step)[indsb] / step
-
-    # print(torch.sum(x_rep))
-    return x_rep.sum(1) / x_rep.shape[1]
-
-
-# classes_size = classes.size()[0]
-# classes_eq = (classes.repeat(classes_size, 1) == classes.view(-1, 1).repeat(1, classes_size)).data
-# dists = torch.mm(features, features.transpose(0, 1))
-# assert ((dists > 1 + self.eps).sum().item() + (
-#         dists < -1 - self.eps).sum().item()) == 0, 'L2 normalization should be used'
-# s_inds = torch.triu(torch.ones(classes_eq.size()), 1).byte()
-# if self.cuda:
-#     s_inds = s_inds.cuda()
-# pos_inds = classes_eq[s_inds].repeat(self.tsize, 1)
-# neg_inds = ~classes_eq[s_inds].repeat(self.tsize, 1)
-# pos_size = classes_eq[s_inds].sum().item()
-# neg_size = (~classes_eq[s_inds]).sum().item()
-# s = dists[s_inds].view(1, -1)
-# s_repeat = s.repeat(self.tsize, 1)
-# s_repeat_floor = (torch.floor(s_repeat.data / self.step) * self.step).float()
-
-    # left_ind = torch.floor((x - start) / step).int()
-    # left_weight = x - (start + left_ind * step)
-    #
-    # right_ind = left_ind + 1
-    # right_weight = (start + right_ind * step) - x
-    #
-    # # print(type(left_ind), left_ind.shape)
-    # # print(left_ind)
-    # # print(type(right_weight), right_weight.shape)
-    # hist_left = torch.bincount(left_ind.reshape(-1), right_weight.reshape(-1))
-    # # print(len(hist_left))
-    #
-    # hist_right = torch.bincount(right_ind.reshape(-1), left_weight.reshape(-1))
-    #
-    # hist = torch.cat((hist_left, torch.zeros(1).to(device)), 0)
-    #
-    # # print(hist_left)
-    # # print(hist_right)
-    # hist += hist_right
-    #
-    # # print(hist)
-    # return hist
-
-
 def get_transform(xb, net, step, args):
     xb_lat = np.zeros((xb.shape[0], args.dout))
     net.eval()
@@ -310,7 +202,7 @@ def forward_pass_enc(enc, xall, bs=128, device=None):
     return np.vstack(xl_net)
 
 
-def save_transform(ds, model, path, device, enc=False):
+def save_transformed_data(ds, model, path, device, enc=False):
     # ds = torch.from_numpy(ds).to(device)
 
     if enc:
@@ -324,7 +216,8 @@ def save_transform(ds, model, path, device, enc=False):
         ds = forward_pass_enc(model, ds, 1024)
     else:
         ds = forward_pass(model, ds, 1024)
-    file_for_write_base = "data/" + path
+    # file_for_write_base = "data/" + path
+    file_for_write_base = "/mnt/data/shekhale/data/" + path
     write_fvecs(file_for_write_base, ds)
 
 
@@ -334,9 +227,6 @@ def loss_permutation(x, y, args, k, size=10**4):
     k_nn_y = get_nearestneighbors(y[perm[:size]], y, k, args.device, needs_exact=True)
     perm_coeff = calc_permutation(k_nn_x, k_nn_y, k)
     print('top %d permutation is %.3f' % (k, perm_coeff))
-    # with open("validation_sim.txt", "a") as rfile:
-    #     rfile.write("epoch %d, perm = %.3f\n" % (int(epoch), perm_coeff))
-    # logs['val'] = perm_coeff
     return perm_coeff
 
 
@@ -393,10 +283,8 @@ def show_neighbours_distr(x, k, args, hist_steps=10, print_in_file=False, file_n
     if print_in_file:
         with open(file_name, "a") as rfile:
             rfile.write("Top %d neigbour distance distribution \n" %(k-1))
-            # rfile.write(hist)
             rfile.write(" ".join(str(item)[:5] for item in hist) + "\n")
             rfile.write(" ".join(str(item)[:5] for item in hist_values) + "\n")
-            # rfile.write(hist_values)
 
     return hist
 
@@ -404,7 +292,7 @@ def show_neighbours_distr(x, k, args, hist_steps=10, print_in_file=False, file_n
 def get_weights(x, k, args):
     n = x.shape[0]
     knn = get_nearestneighbors(x, x, k, args.device, needs_exact=True)
-    kth_neighbors_ind = knn[:, -1]
+    # kth_neighbors_ind = knn[:, -1]
     distances = [0] * n
 
     weights = [1 / d for d in distances]
@@ -474,6 +362,7 @@ def generate_uniform(n, d, nq, device, save=False):
 
     gt = get_nearestneighbors(xq, x, 100, device, needs_exact=True)
     if save:
+        # path_start = "/uniform_"
         file_for_write_base = "/uniform_base_" + str(d) + ".fvecs"
         write_fvecs(file_for_write_base, xb)
         file_for_write_q = "/uniform_query_" + str(d) + ".fvecs"
