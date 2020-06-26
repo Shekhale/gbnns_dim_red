@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     } else if (dataset_name == "gist") {
         vector<int> efs_c{200, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
-        vector<int> efs_hnsw_c{200, 400, 600, 800, 1000};
+        vector<int> efs_hnsw_c{100, 150, 200, 300, 400};
         efs_hnsw.insert(efs_hnsw.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         n_q_c = 1000;
         d_c = 960;
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     } else if (dataset_name == "glove") {
         vector<int> efs_c{300, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
-        vector<int> efs_hnsw_c{200, 400, 600, 800, 1000};
+        vector<int> efs_hnsw_c{50, 100, 200,  300, 400};
         efs_hnsw.insert(efs_hnsw.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         d_c = 300;
         hnsw_name = "M20_ef2000";
