@@ -49,13 +49,13 @@ int main(int argc, char **argv) {
         vector<int> efs_c{40, 60, 80, 100, 120, 140, 160};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         vector<int> efs_hnsw_c{10, 20, 30, 40, 60, 80, 100};
-        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
+        efs_hnsw.insert(efs_hnsw.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         hnsw_name = "M18_ef2000_onelevel1";
     } else if (dataset_name == "gist") {
         vector<int> efs_c{200, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         vector<int> efs_hnsw_c{200, 400, 600, 800, 1000};
-        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
+        efs_hnsw.insert(efs_hnsw.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         n_q_c = 1000;
         d_c = 960;
         hnsw_name = "M18_ef1000_onelevel1";
@@ -63,14 +63,14 @@ int main(int argc, char **argv) {
         vector<int> efs_c{300, 400, 600, 800, 1000};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         vector<int> efs_hnsw_c{200, 400, 600, 800, 1000};
-        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
+        efs_hnsw.insert(efs_hnsw.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         d_c = 300;
         hnsw_name = "M20_ef2000";
     } else if (dataset_name == "deep") {
         vector<int> efs_c{40, 80, 120, 160, 200};
         efs.insert(efs.end(), efs_c.begin(), efs_c.end());
         vector<int> efs_hnsw_c{40, 80, 120, 160, 200};
-        efs_hnsw.insert(efs.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
+        efs_hnsw.insert(efs_hnsw.end(), efs_hnsw_c.begin(), efs_hnsw_c.end());
         d_c = 96;
         hnsw_name = "M16_ef500_onelevel1";
     } else {

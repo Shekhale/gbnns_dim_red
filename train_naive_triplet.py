@@ -248,7 +248,7 @@ if __name__ == '__main__':
     dim = xb.shape[1]
     xt = xb
 
-    # GIST does not normalized
+    # GIST's vectors have different norm
     if args.database != "gist":
         xt = normalize_numpy(xt, args)
         xb = normalize_numpy(xb, args)
