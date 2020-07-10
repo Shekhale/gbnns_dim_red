@@ -137,7 +137,7 @@ void get_real_tests_torch(int n, int d, int d_low, int n_q, int n_tr, vector<int
 
     int n_q_n = n_q;
     for (int i=0; i < efs.size(); ++i) {
-        get_one_test(main_graph, kl, db, queries, db_low, net, truth, n, d, d_low, n_q_n, n_tr, efs[i], 1,
+        get_one_test_torch(main_graph, kl, db, queries, db_low, net, truth, n, d, d_low, n_q_n, n_tr, efs[i], 1,
                      graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, efs[i], number_exper, 1);
     }
 

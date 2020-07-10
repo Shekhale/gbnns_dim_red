@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
 
     graph_name = "GD_low";
     cout << graph_name << endl;
-    get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, gd_knn_low, gd_knn_low, db, queries, db_low, net,\
+    get_real_tests_torch(n, d, d_low, n_q, n_tr, efs, random_gen, gd_knn_low, gd_knn_low, db, queries, db_low, net,\
                    truth, output_txt, &ang, graph_name, false, false, 1);
 
 
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
 
     graph_name = "hnsw";
     cout << graph_name << endl;
-    get_real_tests(n, d, d_low, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db_low, net,\
+    get_real_tests_torch(n, d, d_low, n_q, n_tr, efs, random_gen, hnsw, hnsw, db, queries, db_low, net,\
                    truth, output_txt, &ang, graph_name, false, false, 1);
 
 
