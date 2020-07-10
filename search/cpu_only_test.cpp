@@ -229,10 +229,9 @@ int main(int argc, char **argv) {
                    truth, output_txt, &ang, graph_name, false, false, 1);
 
 
-
     vector< vector <uint32_t>> hnsw(n);
     hnsw = load_edges(edge_hnsw_dir, hnsw);
-	cout << "hnsw_low " << FindGraphAverageDegree(hnsw) << endl;
+	cout << "hnsw " << FindGraphAverageDegree(hnsw) << endl;
 
     graph_name = "hnsw";
     cout << graph_name << endl;

@@ -13,16 +13,13 @@
 #include <vector>
 #include <omp.h>
 
-
 #include <chrono>
 
 #include <limits>
 #include <sys/time.h>
 
-
 #include <algorithm>
 #include <ctime>
-
 
 //#include "support_classes.h"
 #include "search_function.h"
