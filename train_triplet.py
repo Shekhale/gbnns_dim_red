@@ -358,7 +358,7 @@ if __name__ == '__main__':
         val_k = 2 * args.dout
         all_logs = triplet_optimize(xt, xv, xt_gt, xq, gt, net, args, lam, r_pos, r_neg, val_k, margin)
 
-        params_string = str(dout) + "_l_" + str(1) + "_1m_" + str(r_pos) + "_" + str(r_neg) + "_w_" + str(dint) + "_e_" + str(args.epochs)
+        params_string = str(dout) + "_l_" + str(int(-np.log10(lam))) + "_1m_" + str(r_pos) + "_" + str(r_neg) + "_w_" + str(dint) + "_e_" + str(args.epochs)
         # net_path = "/mnt/data/shekhale/models/nns_graphs/" + str(args.database) + "/" + str(args.database) + "_net_" + params_string + ".pth"
         # torch.save(net.state_dict(), net_path)
 

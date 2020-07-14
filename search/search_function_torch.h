@@ -58,14 +58,11 @@ void get_one_test_torch(vector<vector<uint32_t> > &knn_graph, vector<vector<uint
 //            const float* point_q_low = queries_low.data() + i * d_low;
             if (d != d_low) {
                 std::vector<torch::jit::IValue> inputs;
-                torch::Tensor query_tensor = torch::ones({1, d});
-                for (int j=0; j < d; ++j) {
-                    query_tensor[0][j] = queries[i*d + j];
-                }
+                torch::Tensor query_tensor = torch::from_blob(queries.data() + i*d, {1, d});
                 inputs.push_back(query_tensor);
-    //            const float* point_q_low = static_cast<float*>(net.forward(inputs).toTensor().data_ptr());
                 at::Tensor output = net.forward(inputs).toTensor();
                 float* point_q_low = static_cast<float*>(output.data_ptr());
+
 				if (recheck_size > 0) {
 	                tr = search(point_q_low, ds_low.data(), n, d_low, knn_graph, kl_graph, recheck_size,
 	                            recheck_size, inter_points[i], metric, visitedlistpool, use_second_graph, llf, hops_bound);
