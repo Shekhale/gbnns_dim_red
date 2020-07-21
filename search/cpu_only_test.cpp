@@ -59,11 +59,12 @@ int main(int argc, char **argv) {
 
     cout << n << " " << n_q << " " << n_tr << " " << d << " " << d_low << endl;
 
-//    string second_part = string("");
-//    string hnsw_name = string("");
-//    string hnsw_low_name = string("");
+//    string second_part = "";
+//    string hnsw_low_name = "";
 //    int gd_graph_size = 50;
     vector<int> efs = VectorFromString(params_map["efs"]);
+//    vector<int> efs_hnsw = VectorFromString(params_map["efs_hnsw"]);
+//    string hnsw_name = params_map["hnsw_name"];
 
 
     string path_data = "/mnt/data/shekhale/data/" + dataset_name + "/" + dataset_name;
