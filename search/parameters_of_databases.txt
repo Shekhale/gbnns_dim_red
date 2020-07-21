@@ -1,0 +1,54 @@
+
+sift n 1000000
+sift n_q 10000
+sift n_tr 100
+sift d 128
+sift d_low 32
+sift efs 40,60,80,100,120,140,160
+sift efs_hnsw 10,20,30,40,60,80,100
+sift second_part _32_l_2_1m_5_10_w_128_e_40
+sift hnsw_name M18_ef2000_onelevel1
+sift hnsw_low_name M18_ef500_onelevel1_low
+
+gist n 1000000
+gist n_q 1000
+gist n_tr 100
+gist d 960
+gist d_low 64
+gist efs 200,400,600,800,1000
+gist efs_hnsw 100,150,200,300,400
+gist second_part _64_l_2_1m_5_40_w_1024_e_40
+gist hnsw_name M18_ef1000_onelevel1
+gist hnsw_low_name M18_ef500_onelevel1_low
+
+deep n 1000000
+deep n_q 10000
+deep n_tr 100
+deep d 96
+deep d_low 48
+deep efs 40,80,120,160,200
+deep efs_hnsw 40,80,120,160,200
+deep second_part _48_l_2_1m_5_10_w_128_e_40
+deep hnsw_name M16_ef500_onelevel1
+deep hnsw_low_name M16_ef500_onelevel1_low
+
+glove n 1000000
+glove n_q 10000
+glove n_tr 100
+glove d 300
+glove d_low 144
+glove efs 300,400,600,800,1000
+glove second_part _144_l_1_1m_5_40_w_256_e_40
+glove hnsw_name M20_ef2000
+glove hnsw_low_name M20_ef500_onelevel1_low
+
+boltalka_dssm n 1100245
+boltalka_dssm n_q 5000
+boltalka_dssm n_tr 1
+boltalka_dssm n_tr_2 100
+boltalka_dssm d 600
+boltalka_dssm d_low 48
+
+
+
+

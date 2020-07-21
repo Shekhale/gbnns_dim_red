@@ -1,6 +1,7 @@
 #include <random>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -334,12 +335,12 @@ vector< vector <uint32_t>> CutKL(vector< vector <uint32_t>> &kl, int l, int N, v
 
 
 int FindGraphAverageDegree(vector< vector <uint32_t>> &graph) {
-    float ans = 0;
+    double ans = 0;
     int n = graph.size();
     for (int i=0; i < n; ++i) {
         ans += graph[i].size();
     }
-    return float(ans / n);
+    return ans / n;
 }
 
 
@@ -364,4 +365,108 @@ vector< vector<uint32_t> > GraphMerge(vector< vector<uint32_t> > &graph_f, vecto
     }
 
     return union_graph;
+}
+
+
+vector< vector<uint32_t> > hnswlikeGD(vector< vector<uint32_t> > &graph, const float* ds,
+                              int M,  size_t N, size_t d, Metric *metric, bool reverse) {
+
+    vector< vector<uint32_t> > gd_graph(N);
+#pragma omp parallel for
+    for (int i=0; i < N; ++i) {
+        vector<neighbor> neighbors;
+        const float* point_i = ds + i * d;
+        for (int j=0; j < graph[i].size(); ++j) {
+            const float* point_cur = ds + graph[i][j] * d;
+            float dist_i = metric->Dist(point_i, point_cur, d);
+            if (dist_i > 0.00001) {
+                neighbor neig{graph[i][j], dist_i};
+                neighbors.push_back(neig);
+            }
+        }
+        sort(neighbors.begin(), neighbors.end());
+        gd_graph[i].push_back(neighbors[0].number);
+        for (int j=0; j < 5; ++j) {
+			gd_graph[i].push_back(neighbors[j].number);
+		}
+        for (int j=5; j < neighbors.size(); ++j) {
+            const float* point_pre = ds + neighbors[j].number * d;
+            bool good = true;
+            for (int l=0; l < gd_graph[i].size(); ++l) {
+                const float* point_alr = ds + gd_graph[i][l] * d;
+                if (metric->Dist(point_pre, point_i, d) > metric->Dist(point_pre, point_alr, d)) {
+                    good = false;
+                    break;
+                }
+            }
+            if (good) {
+				gd_graph[i].push_back(neighbors[j].number);
+			}
+            if (gd_graph[i].size() == M) {
+                break;
+            }
+        }
+    }
+    if (reverse) {
+        vector< vector<uint32_t> > reverse_graph(N);
+        for (int i=0; i < N; ++i) {
+            for (int j=0; j < gd_graph[i].size(); ++j) {
+                if (reverse_graph[gd_graph[i][j]].size() < 2 * M) {
+                    reverse_graph[gd_graph[i][j]].push_back(i);
+                }
+            }
+        }
+        gd_graph = GraphMerge(gd_graph, reverse_graph);
+    }
+
+    return gd_graph;
+}
+
+
+vector< vector<uint32_t> > FindBadNodes(vector< vector<uint32_t> > &graph, const float* ds,
+                              int M,  size_t N, size_t d, Metric *metric, bool reverse) {
+
+#pragma omp parallel for
+    for (int i=0; i < N; ++i) {
+        if (graph[i].size() != M) {
+            cout << graph[i].size() << ' ' << i << endl;
+        }
+    }
+
+}
+
+
+std::vector<std::string> split(const std::string& s, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+
+std::map<std::string, std::string> AddMapFromStr(std::string str, std::map<std::string, std::string> params_map,
+                                                 std::string global_key) {
+    char delimiter(' ');
+    std::vector<string> str_sep = split(str, delimiter);
+    if (str_sep[0] == global_key and str_sep.size() == 3) {
+        params_map[str_sep[1]] = str_sep[2];
+    }
+    return params_map;
+}
+
+
+std::map<std::string, std::string> ReadSearchParams(std::string file_name, std::string database_name) {
+    std::map<std::string, std::string> params_map;
+
+    std::ifstream file(file_name);
+    std::string str;
+    while (std::getline(file, str))
+    {
+        params_map = AddMapFromStr(str, params_map, database_name);
+    }
+
+    return params_map;
 }
