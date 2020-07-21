@@ -1,4 +1,3 @@
-
 sift n 1000000
 sift n_q 10000
 sift n_tr 100
@@ -42,13 +41,10 @@ glove second_part _144_l_1_1m_5_40_w_256_e_40
 glove hnsw_name M20_ef2000
 glove hnsw_low_name M20_ef500_onelevel1_low
 
-boltalka_dssm n 1100245
+boltalka_dssm n 11105147
 boltalka_dssm n_q 5000
 boltalka_dssm n_tr 1
 boltalka_dssm n_tr_2 100
 boltalka_dssm d 600
 boltalka_dssm d_low 48
-
-
-
-
+boltalka_dssm efs 100,200,500,1000
