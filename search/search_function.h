@@ -1,6 +1,7 @@
 #include <random>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -12,326 +13,470 @@
 #include <queue>
 #include <vector>
 #include <omp.h>
-
-
-#include <chrono>
+#include <cassert>
 
 #include <limits>
 #include <sys/time.h>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#include <stdexcept>
 
-#include <algorithm>
-#include <ctime>
+#define  __builtin_popcount(t) __popcnt(t)
+#else
+#include <x86intrin.h>
+#endif
 
-
-#include "support_classes.h"
-#include "visited_list_pool.h"
-
+#define USE_AVX
+#if defined(__GNUC__)
+#define PORTABLE_ALIGN32 __attribute__((aligned(32)))
+#else
+#define PORTABLE_ALIGN32 __declspec(align(32))
+#endif
 
 using namespace std;
 
+float EPS = 1e-10;
 
-struct triple_result {
-    priority_queue<pair<float, int > > topk;
-    int hops;
-    int dist_calc;
-    int degree;
+struct neighbor {
+    int number;
+    float dist;
+
+    size_t operator()(const neighbor &n) const {
+        size_t x = std::hash<int>()(n.number);
+
+        return x;
+    }
+};
+
+bool operator<(const neighbor& x, const neighbor& y)
+{
+    return x.dist < y.dist;
+}
+
+
+// reads 0 <= d < 4 floats as __m128
+static inline __m128 masked_read (int d, const float *x)
+{
+//    assert (0 <= d && d < 4);
+    __attribute__((__aligned__(16))) float buf[4] = {0, 0, 0, 0};
+    switch (d) {
+        case 3:
+            buf[2] = x[2];
+        case 2:
+            buf[1] = x[1];
+        case 1:
+            buf[0] = x[0];
+    }
+    return _mm_load_ps (buf);
+    // cannot use AVX2 _mm_mask_set1_epi32
+}
+
+
+class Metric {
+public:
+    virtual float Dist(const float *x, const float *y, size_t d) = 0;
 };
 
 
-void MakeStep(vector <uint32_t> &graph_level, const float *query, const float* db,
-              priority_queue<pair<float, int > > &topResults,
-              priority_queue<std::pair<float, int > > &candidateSet,
-              Metric *metric, uint32_t d, int &query_dist_calc, bool &found, int &ef, int &k,
-              VisitedList *vl) {
-
-
-    vl_type *massVisited = vl->mass;
-    vl_type currentV = vl->curV;
-    for (int j = 0; j < graph_level.size(); ++j) {
-        int neig_num = graph_level[j];
-        if (massVisited[neig_num] != currentV) {
-            massVisited[neig_num] = currentV;
-            const float *neig_coord = db + neig_num * d;
-            float dist = metric->Dist(query, neig_coord, d);
-            query_dist_calc++;
-
-            if (topResults.top().first > dist || topResults.size() < ef) {
-                candidateSet.emplace(-dist, neig_num);
-                found = true;
-                topResults.emplace(dist, neig_num);
-                if (topResults.size() > ef)
-                    topResults.pop();
-            }
+class LikeL2Metric : public Metric {
+public:
+    float Dist(const float *x, const float *y, size_t d) {
+        float res = 0;
+        for (int i = 0; i < d; ++i) {
+            res += pow(*x - *y, 2);
+            ++x;
+            ++y;
         }
+        return res;
+    }
+};
+
+
+class L2Metric : public Metric {
+public:
+    float Dist(const float *x, const float *y, size_t d) {
+        float PORTABLE_ALIGN32 TmpRes[8];
+        size_t qty16 = d >> 4;
+
+        const float *pEnd1 = x + (qty16 << 4);
+
+        __m256 diff, v1, v2;
+        __m256 sum = _mm256_set1_ps(0);
+
+        while (x < pEnd1) {
+            v1 = _mm256_loadu_ps(x);
+            x += 8;
+            v2 = _mm256_loadu_ps(y);
+            y += 8;
+            diff = _mm256_sub_ps(v1, v2);
+            sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+
+            v1 = _mm256_loadu_ps(x);
+            x += 8;
+            v2 = _mm256_loadu_ps(y);
+            y += 8;
+            diff = _mm256_sub_ps(v1, v2);
+            sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+        }
+        _mm256_store_ps(TmpRes, sum);
+        float res = TmpRes[0] + TmpRes[1] + TmpRes[2] + TmpRes[3] + TmpRes[4] + TmpRes[5] + TmpRes[6] + TmpRes[7];
+        return res;
+    };
+};
+
+
+class Angular : public Metric {
+public:
+    float Dist(const float *x, const float *y, size_t d) {
+        __m256 msum1 = _mm256_setzero_ps();
+
+        while (d >= 8) {
+            __m256 mx = _mm256_loadu_ps (x); x += 8;
+            __m256 my = _mm256_loadu_ps (y); y += 8;
+            msum1 = _mm256_add_ps (msum1, _mm256_mul_ps (mx, my));
+            d -= 8;
+        }
+
+        __m128 msum2 = _mm256_extractf128_ps(msum1, 1);
+        msum2 +=       _mm256_extractf128_ps(msum1, 0);
+
+        if (d >= 4) {
+            __m128 mx = _mm_loadu_ps (x); x += 4;
+            __m128 my = _mm_loadu_ps (y); y += 4;
+            msum2 = _mm_add_ps (msum2, _mm_mul_ps (mx, my));
+            d -= 4;
+        }
+
+        if (d > 0) {
+            __m128 mx = masked_read (d, x);
+            __m128 my = masked_read (d, y);
+            msum2 = _mm_add_ps (msum2, _mm_mul_ps (mx, my));
+        }
+
+        msum2 = _mm_hadd_ps (msum2, msum2);
+        msum2 = _mm_hadd_ps (msum2, msum2);
+        return  -_mm_cvtss_f32 (msum2);
+    };
+};
+
+template<typename T>
+void readXvec(std::ifstream &in, T *data, const size_t d, const size_t n = 1)
+{
+    uint32_t dim = d;
+    for (size_t i = 0; i < n; i++) {
+        in.read((char *) &dim, sizeof(uint32_t));
+        if (dim != d) {
+            std::cout << "file error\n";
+            std::cout << "dim " << dim << ", d " << d << std::endl;
+            std::cout << "our fault\n";
+
+            exit(1);
+        }
+        in.read((char *) (data + i * dim), dim * sizeof(T));
     }
 }
 
 
-triple_result search(const float *query, const float* db, uint32_t N, uint32_t d,
-                      vector<vector <uint32_t> > &main_graph, vector<vector <uint32_t> > &auxiliary_graph,
-                      int ef, int k, vector<uint32_t> &inter_points, Metric *metric,
-                     VisitedListPool *visitedlistpool,
-                      bool use_second_graph, bool llf, uint32_t hops_bound) {
-
-
-    std::priority_queue<std::pair<float, int > > topResults;
-
-    int query_dist_calc = 1;
-    int num_hops = 0;
-    for (int i = 0; i < inter_points.size(); ++i) {
-        std::priority_queue<std::pair<float, int > > candidateSet;
-        const float* start = db + inter_points[i]*d;
-        float dist = metric->Dist(query, start, d);
-
-        topResults.emplace(dist, inter_points[i]);
-        candidateSet.emplace(-dist, inter_points[i]);
-        VisitedList *vl = visitedlistpool->getFreeVisitedList();
-        vl_type *massVisited = vl->mass;
-        vl_type currentV = vl->curV;
-        massVisited[inter_points[i]] = currentV;
-        while (!candidateSet.empty()) {
-            std::pair<float, int> curr_el_pair = candidateSet.top();
-            if (-curr_el_pair.first > topResults.top().first) break;
-
-            candidateSet.pop();
-            int curNodeNum = curr_el_pair.second;
-            bool auxiliary_found = false;
-
-            if (use_second_graph and num_hops < hops_bound) {
-                vector <uint32_t> curAuxiliaryNodeNeighbors = auxiliary_graph[curNodeNum];
-                MakeStep(curAuxiliaryNodeNeighbors, query, db,
-                        topResults, candidateSet,
-                        metric,
-                        d, query_dist_calc, auxiliary_found, ef, k,
-                        vl);
-            }
-
-            if (!(auxiliary_found * llf) or !use_second_graph) {
-                vector <uint32_t> curMainNodeNeighbors = main_graph[curNodeNum];
-                MakeStep(curMainNodeNeighbors, query, db,
-                        topResults, candidateSet,
-                        metric,
-                        d, query_dist_calc, auxiliary_found, ef, k,
-                        vl);
-            }
-            num_hops++;
-        }
-        visitedlistpool->releaseVisitedList(vl);
+template<typename T>
+void writeXvec(std::ofstream &out, T *data, const size_t d, const size_t n = 1)
+{
+    const uint32_t dim = d;
+    for (size_t i = 0; i < n; i++) {
+        out.write((char *) &dim, sizeof(uint32_t));
+        out.write((char *) (data + i * dim), dim * sizeof(T));
     }
+}
 
+void write_edges(const char *location, const std::vector<std::vector<uint32_t>> &edges) {
+    std::cout << "Saving edges to " << location << std::endl;
+    std::ofstream output(location, std::ios::binary);
 
-    while (topResults.size() > k) {
-        topResults.pop();
+    for (uint32_t i = 0; i < edges.size(); i++) {
+        const uint32_t *data = edges[i].data();
+        uint32_t size = edges[i].size();
+
+        output.write((char *) &size, sizeof(uint32_t));
+        output.write((char *) data, sizeof(uint32_t) * size);
     }
-
-    triple_result ans{topResults, num_hops, query_dist_calc};
-    return ans;
 }
 
 
-int GetRealNearest(const float* point_q, int k, int d, int d_low, priority_queue<pair<float, int > > &topk,
-                    vector<float> &ds,
-                    Metric *metric) {
+vector<std::vector<uint32_t>> load_edges(const char *location, std::vector<std::vector<uint32_t>> edges) {
+    // std::cout << "Loading edges from " << location << std::endl;
+    std::ifstream input(location, std::ios::binary);
 
-    const float* point_i = ds.data() + d * topk.top().second;
-    float min_dist = metric->Dist(point_i, point_q, d);
-    int real_topk = topk.top().second;
-    topk.pop();
-    float dist;
-    while (!topk.empty()) {
-        point_i = ds.data() + d * topk.top().second;
-        dist = metric->Dist(point_i, point_q, d);
-        if (dist < min_dist) {
-            min_dist = dist;
-            real_topk = topk.top().second;
+    uint32_t size;
+    for (int i = 0; i < edges.size(); i++) {
+        input.read((char *) &size, sizeof(uint32_t));
+
+        vector<uint32_t> vec(size);
+        uint32_t *data = vec.data();
+        input.read((char *) data, sizeof(uint32_t)*size);
+        for (int j = 0; j < size; ++j) {
+            edges[i].push_back(vec[j]);
         }
-        topk.pop();
     }
-
-    return real_topk;
+    return edges;
 }
 
-void get_one_test(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> > &kl_graph,
-                  vector<float> &ds, vector<float> &queries, vector<float> &ds_low, vector<float> &queries_low,
-                  vector<uint32_t> &truth,
-                  int n, int d, int d_low, int n_q, int n_tr, int ef, int k, string graph_name,
-                  Metric *metric, const char* output_txt,
-                  vector<vector<uint32_t> > inter_points, bool use_second_graph, bool llf, uint32_t hops_bound, int dist_calc_boost,
-                  int recheck_size, int number_exper, int number_of_threads) {
 
-    std::ofstream outfile;
-    outfile.open(output_txt, std::ios_base::app);
+vector<float> create_uniform_data(int N, int d, std::mt19937 random_gen) {
+    vector<float> ds(N*d);
+    normal_distribution<float> norm_distr(0, 1);
+    for (int i=0; i < N; ++i) {
+        vector<float> point(d);
+        float norm_coeff = 0;
+        for (int j=0; j < d; ++j) {
+            point[j] = norm_distr(random_gen);
+            norm_coeff += point[j] * point[j];
+        }
+        norm_coeff = pow(norm_coeff, 0.5);
+        for (int j=0; j < d; ++j) {
+            ds[i * d + j] = point[j] / norm_coeff;
+        }
+    }
+    return  ds;
+}
 
-
-    VisitedListPool *visitedlistpool = new VisitedListPool(1, n);
-    int hops = 0;
-    int dist_calc = 0 + dist_calc_boost * n_q;
-    float acc = 0;
-    float work_time = 0;
-    int num_exp = 0;
-
-    omp_set_num_threads(number_of_threads);
-    for (int v = 0; v < number_exper; ++v) {
-        num_exp += 1;
-        vector<int> ans(n_q);
-        StopW stopw = StopW();
+vector<uint32_t> get_truth(vector<float> ds, vector<float> query, int N, int d, int N_q, Metric *metric) {
+    vector<uint32_t> truth(N_q);
 #pragma omp parallel for
-        for (int i = 0; i < n_q; ++i) {
-
-            triple_result tr;
-            const float* point_q = queries.data() + i * d;
-            const float* point_q_low = queries_low.data() + i * d_low;
-            if (d != d_low) {
-				if (recheck_size > 0) {
-	                tr = search(point_q_low, ds_low.data(), n, d_low, knn_graph, kl_graph, recheck_size,
-	                            recheck_size, inter_points[i], metric, visitedlistpool, use_second_graph, llf, hops_bound);
-	                ans[i] = GetRealNearest(point_q, k, d, d_low, tr.topk, ds, metric);
-	                dist_calc += recheck_size;
-				} else {
-					tr = search(point_q_low, ds_low.data(), n, d_low, knn_graph, kl_graph, ef,
-	                            k, inter_points[i], metric, visitedlistpool, use_second_graph, llf, hops_bound);
-
-	                while (tr.topk.size() > k) {
-	                    tr.topk.pop();
-	                }
-	                ans[i] = tr.topk.top().second;
-				}
-            } else {
-                tr = search(point_q, ds.data(), n, d, knn_graph, kl_graph, ef,
-                            k, inter_points[i], metric, visitedlistpool, use_second_graph, llf, hops_bound);
-
-                while (tr.topk.size() > k) {
-                    tr.topk.pop();
-                }
-                ans[i] = tr.topk.top().second;
+    for (int i=0; i < N_q; ++i) {
+        const float* tendered_d = ds.data();
+        const float* goal = query.data() + i*d;
+        float dist = metric->Dist(tendered_d, goal, d);
+        float new_dist = dist;
+        int tendered_num = 0;
+        for (int j=1; j<N; ++j) {
+            tendered_d += d;
+            new_dist = metric->Dist(tendered_d, goal, d);
+            if (new_dist < dist) {
+                dist = new_dist;
+                tendered_num = j;
             }
-
-            hops += tr.hops;
-            dist_calc += tr.dist_calc;
         }
+        truth[i] = tendered_num;
+    }
+    return truth;
+}
 
-        work_time += stopw.getElapsedTimeMicro();
-
-        int print = 0;
-        for (int i = 0; i < n_q; ++i) {
-            acc += ans[i] == truth[i * n_tr];
+vector< vector <uint32_t>> CutKNNbyThreshold(vector< vector <uint32_t>> &knn, vector<float> &ds, float thr, int N, int d,
+                                  Metric *metric) {
+    vector< vector <uint32_t>> knn_cut(N);
+#pragma omp parallel for
+    for (int i=0; i < N; ++i) {
+        const float* point_i = ds.data() + i*d;
+        for (int j=0; j < knn[i].size(); ++j) {
+            int cur = knn[i][j];
+            const float *point_cur = ds.data() + cur*d;
+            if (metric->Dist(point_i, point_cur, d) < thr) {
+                knn_cut[i].push_back(cur);
+            }
         }
     }
+    return  knn_cut;
+}
 
+vector< vector <uint32_t>> CutKNNbyK(vector< vector <uint32_t>> &knn, vector<float> &ds, int knn_size, int N, int d,
+                                             Metric *metric) {
+    vector< vector <uint32_t>> knn_cut(N);
+    bool small_size = false;
+    #pragma omp parallel for
+    for (int i=0; i < N; ++i) {
+        vector<neighbor> neigs;
+        const float* point_i = ds.data() + i*d;
+        for (int j=0; j < knn[i].size(); ++j) {
+            int cur = knn[i][j];
+            const float *point_cur = ds.data() + cur*d;
+            neighbor neig{cur, metric->Dist(point_i, point_cur, d)};
+            neigs.push_back(neig);
+        }
+        if (not small_size and knn_size > knn[i].size()) {
+            cout << "Size knn less than you want" << endl;
+            cout << knn[i].size() << endl;
+            //exit(1);
+            small_size = true;
+        }
 
-    cout << "graph_type " << graph_name << " acc " << acc /  (num_exp * n_q) << " hops " << hops /  (num_exp * n_q) << " dist_calc "
-         << dist_calc /  (num_exp * n_q) << " work_time " << work_time / (num_exp * 1e6 * n_q) << endl;
-    outfile << "graph_type " << graph_name << " acc " << acc /  (num_exp * n_q) << " hops " << hops /  (num_exp * n_q) << " dist_calc "
-            << dist_calc /  (num_exp * n_q) << " work_time " << work_time / (num_exp * 1e6 * n_q) << endl;
+        sort(neigs.begin(), neigs.end());
+        int cur_size = knn_size;
+        if (knn[i].size() < cur_size) {
+			cur_size = knn[i].size();
+		}
+        for (int j=0; j < cur_size; ++j) {
+            knn_cut[i].push_back(neigs[j].number);
+        }
+    }
+    return  knn_cut;
 }
 
 
+vector< vector <uint32_t>> CutKL(vector< vector <uint32_t>> &kl, int l, int N, vector< vector <uint32_t>> &knn) {
+    vector< vector <uint32_t>> kl_cut(N);
+    #pragma omp parallel for
+    for (int i=0; i < N; ++i) {
+        if (l > kl[i].size()) {
+            cout << "Graph have less edges that you want" << endl;
+            exit(1);
+        }
+        vector <uint32_t> kl_sh = kl[i];
+        random_shuffle(kl_sh.begin(), kl_sh.end());
+        int it = 0;
+        while (kl_cut[i].size() < l and it < kl_sh.size()) {
+            if (find(knn[i].begin(), knn[i].end(), kl_sh[it]) == knn[i].end()) {
+                kl_cut[i].push_back(kl_sh[it]);
+            }
+            ++it;
+        }
+    }
+    return  kl_cut;
+}
 
-void get_synthetic_tests(int n, int d, int n_q, int n_tr, std::mt19937 random_gen,
-                vector< vector<uint32_t> > &knn, vector< vector<uint32_t> > &kl, vector<float> &db,
-                vector<float> &queries, vector<uint32_t> &truth, const char* output_txt,
-                Metric *metric, string graph_name, bool use_second_graph, bool llf, bool beam_search) {
 
-    vector<vector<uint32_t> > inter_points(n_q);
-    int num = 0;
-    uniform_int_distribution<int> uniform_distr(0, n-1);
-    for (int j=0; j < n_q; ++j) {
-        num = uniform_distr(random_gen);
-        inter_points[j].push_back(num);
+int FindGraphAverageDegree(vector< vector <uint32_t>> &graph) {
+    double ans = 0;
+    int n = graph.size();
+    for (int i=0; i < n; ++i) {
+        ans += graph[i].size();
+    }
+    return ans / n;
+}
+
+
+inline bool FileExist (std::string& name) {
+    ifstream f(name.c_str());
+    return f.good();
+}
+
+vector< vector<uint32_t> > GraphMerge(vector< vector<uint32_t> > &graph_f, vector< vector<uint32_t> > &graph_s) {
+    int n = graph_f.size();
+    vector <vector<uint32_t> > union_graph(n);
+#pragma omp parallel for
+    for (int i=0; i < n; ++i) {
+        for (int j =0; j < graph_f[i].size(); ++j) {
+            union_graph[i].push_back(graph_f[i][j]);
+        }
+        for (int j =0; j < graph_s[i].size(); ++j) {
+            if (find(union_graph[i].begin(), union_graph[i].end(), graph_s[i][j]) == union_graph[i].end()) {
+                union_graph[i].push_back(graph_s[i][j]);
+            }
+        }
     }
 
+    return union_graph;
+}
 
-    vector<int> ef_coeff;
-    vector<int> k_coeff;
-    uint32_t hops_bound = 11;
-    int recheck_size = -1;
-    int knn_size = FindGraphAverageDegree(knn);
 
-    if (beam_search) {
-        vector<int> k_coeff_{knn_size, knn_size, knn_size, knn_size, knn_size, knn_size};
-        k_coeff.insert(k_coeff.end(), k_coeff_.begin(), k_coeff_.end());
-    } else {
-        vector<int> ef_coeff_{1, 1, 1, 1, 1, 1};
-        ef_coeff.insert(ef_coeff.end(), ef_coeff_.begin(), ef_coeff_.end());
+vector< vector<uint32_t> > hnswlikeGD(vector< vector<uint32_t> > &graph, const float* ds,
+                              int M,  size_t N, size_t d, Metric *metric, bool reverse) {
+
+    vector< vector<uint32_t> > gd_graph(N);
+#pragma omp parallel for
+    for (int i=0; i < N; ++i) {
+        vector<neighbor> neighbors;
+        const float* point_i = ds + i * d;
+        for (int j=0; j < graph[i].size(); ++j) {
+            const float* point_cur = ds + graph[i][j] * d;
+            float dist_i = metric->Dist(point_i, point_cur, d);
+            if (dist_i > 0.00001) {
+                neighbor neig{graph[i][j], dist_i};
+                neighbors.push_back(neig);
+            }
+        }
+        sort(neighbors.begin(), neighbors.end());
+        gd_graph[i].push_back(neighbors[0].number);
+        for (int j=0; j < 5; ++j) {
+			gd_graph[i].push_back(neighbors[j].number);
+		}
+        for (int j=5; j < neighbors.size(); ++j) {
+            const float* point_pre = ds + neighbors[j].number * d;
+            bool good = true;
+            for (int l=0; l < gd_graph[i].size(); ++l) {
+                const float* point_alr = ds + gd_graph[i][l] * d;
+                if (metric->Dist(point_pre, point_i, d) > metric->Dist(point_pre, point_alr, d)) {
+                    good = false;
+                    break;
+                }
+            }
+            if (good) {
+				gd_graph[i].push_back(neighbors[j].number);
+			}
+            if (gd_graph[i].size() == M) {
+                break;
+            }
+        }
+    }
+    if (reverse) {
+        vector< vector<uint32_t> > reverse_graph(N);
+        for (int i=0; i < N; ++i) {
+            for (int j=0; j < gd_graph[i].size(); ++j) {
+                if (reverse_graph[gd_graph[i][j]].size() < 2 * M) {
+                    reverse_graph[gd_graph[i][j]].push_back(i);
+                }
+            }
+        }
+        gd_graph = GraphMerge(gd_graph, reverse_graph);
     }
 
-    if (d == 3) {
-        if (beam_search) {
-            vector<int> ef_coeff_{10, 15, 20, 25, 30};
-            ef_coeff.insert(ef_coeff.end(), ef_coeff_.begin(), ef_coeff_.end());
-        } else {
-            vector<int> k_coeff_{12, 14, 16, 18, 20};
-            k_coeff.insert(k_coeff.end(), k_coeff_.begin(), k_coeff_.end());
-        }
-        hops_bound = 11;
-    } else if (d == 5) {
-        if (beam_search) {
-            vector<int> ef_coeff_{7, 10, 15, 22, 25, 30};
-            ef_coeff.insert(ef_coeff.end(), ef_coeff_.begin(), ef_coeff_.end());
-        } else {
-            vector<int> k_coeff_{15, 20, 25, 30, 40, 60};
-            k_coeff.insert(k_coeff.end(), k_coeff_.begin(), k_coeff_.end());
-        }
-        hops_bound = 7;
-    } else if (d == 9) {
-        if (beam_search) {
-            vector<int> ef_coeff_{5, 8, 15, 25, 30, 35};
-            ef_coeff.insert(ef_coeff.end(), ef_coeff_.begin(), ef_coeff_.end());
-        } else {
-            vector<int> k_coeff_{60, 100, 150, 200, 250, 300};
-            k_coeff.insert(k_coeff.end(), k_coeff_.begin(), k_coeff_.end());
-        }
-        hops_bound = 5;
-    } else if (d == 17) {
-        if (beam_search) {
-            vector<int> ef_coeff_{10, 40, 70, 100, 130, 160};
-            ef_coeff.insert(ef_coeff.end(), ef_coeff_.begin(), ef_coeff_.end());
-        } else {
-            vector<int> k_coeff_{750, 1000, 1250, 1500, 1750, 2000};
-            k_coeff.insert(k_coeff.end(), k_coeff_.begin(), k_coeff_.end());
-        }
-        hops_bound = 4;
-    }
+    return gd_graph;
+}
 
-    int exp_size = min(ef_coeff.size(), k_coeff.size());
 
-    for (int i=0; i < exp_size; ++i) {
+vector< vector<uint32_t> > FindBadNodes(vector< vector<uint32_t> > &graph, const float* ds,
+                              int M,  size_t N, size_t d, Metric *metric, bool reverse) {
 
-        vector< vector <uint32_t>> knn_cur = CutKNNbyK(knn, db, k_coeff[i], n, d, metric);
-
-//        cout << "ef = " << ef_coeff[i] << ", recheck = " << recheck_size << endl;
-        get_one_test(knn_cur, kl, db, queries, db, queries, truth, n, d, d, n_q, n_tr, ef_coeff[i], 1,
-                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, recheck_size, 1, omp_get_max_threads());
+#pragma omp parallel for
+    for (int i=0; i < N; ++i) {
+        if (graph[i].size() != M) {
+            cout << graph[i].size() << ' ' << i << endl;
+        }
     }
 
 }
 
 
+std::vector<std::string> SplitString(const std::string& str, char delimiter) {
 
-void get_real_tests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs, std::mt19937 random_gen,
-                vector< vector<uint32_t> > &main_graph, vector< vector<uint32_t> > &kl, vector<float> &db,
-                vector<float> &queries, vector<float> &db_low, vector<float> &queries_low, vector<uint32_t> &truth,
-                const char* output_txt, Metric *metric,
-                string graph_name, bool use_second_graph, bool llf, int number_exper) {
-
-    vector<vector<uint32_t> > inter_points(n_q);
-    int inter_points_mult = 1;
-    if (graph_name.substr(0, 4) == "hnsw") {
-        inter_points_mult = 0; // HNSW starts from 0
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(str);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
     }
-    int num = 0;
-    uniform_int_distribution<int> uniform_distr(0, n-1);
-    for (int j=0; j < n_q; ++j) {
-        num = uniform_distr(random_gen);
-        inter_points[j].push_back(num * inter_points_mult);
+    return tokens;
+}
+
+
+std::map<std::string, std::string> AddMapFromStr(std::string str, std::map<std::string, std::string> params_map,
+                                                 std::string global_key) {
+    char delimiter(' ');
+    std::vector<string> str_sep = SplitString(str, delimiter);
+    if (str_sep.size() > 0 and str_sep[0] == global_key and str_sep.size() == 3) {
+        params_map[str_sep[1]] = str_sep[2];
+    }
+    return params_map;
+}
+
+
+std::map<std::string, std::string> ReadSearchParams(std::string file_name, std::string database_name) {
+    std::map<std::string, std::string> params_map;
+    std::ifstream file(file_name);
+    std::string str;
+    while (std::getline(file, str)) {
+        params_map = AddMapFromStr(str, params_map, database_name);
     }
 
-    uint32_t hops_bound = 11;
+    return params_map;
+}
 
-    for (int i=0; i < efs.size(); ++i) {
-        get_one_test(main_graph, kl, db, queries, db_low, queries_low, truth, n, d, d_low, n_q, n_tr, efs[i], 1,
-                     graph_name, metric, output_txt, inter_points, use_second_graph, llf, hops_bound, 0, efs[i], number_exper, 1);
+
+vector<int> VectorFromString(string str) {
+    vector<int> ans;
+    vector<string> str_sep = SplitString(str, ',');
+    for (int i = 0; i < str_sep.size(); ++i) {
+        ans.push_back(atoi(str_sep[i].c_str()));
     }
 
+    return ans;
 }
