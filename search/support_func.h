@@ -436,7 +436,7 @@ vector< vector<uint32_t> > FindBadNodes(vector< vector<uint32_t> > &graph, const
 }
 
 
-std::vector<std::string> split(const std::string& s, char delimiter) {
+std::vector<std::string> SplitString(const std::string& s, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     std::istringstream tokenStream(s);
@@ -450,7 +450,7 @@ std::vector<std::string> split(const std::string& s, char delimiter) {
 std::map<std::string, std::string> AddMapFromStr(std::string str, std::map<std::string, std::string> params_map,
                                                  std::string global_key) {
     char delimiter(' ');
-    std::vector<string> str_sep = split(str, delimiter);
+    std::vector<string> str_sep = SplitString(str, delimiter);
     if (str_sep[0] == global_key and str_sep.size() == 3) {
         params_map[str_sep[1]] = str_sep[2];
     }
@@ -469,4 +469,15 @@ std::map<std::string, std::string> ReadSearchParams(std::string file_name, std::
     }
 
     return params_map;
+}
+
+
+vector<uint32_t> VectorFromString(string str) {
+    vector<uint32_t> ans;
+    vector<string> str_sep = SplitString(str, ',');
+    for (int i = 0; i < str_sep.size(); ++i) {
+    ans.push_back(atoi(str_sep[i]));
+    }
+
+    return ans;
 }
