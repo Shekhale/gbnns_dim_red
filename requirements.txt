@@ -1,0 +1,6 @@
+numpy==1.16.0
+torch==1.4.0
+matplotlib
+tqdm
+argparse
+random
