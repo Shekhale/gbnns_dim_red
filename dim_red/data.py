@@ -93,11 +93,5 @@ def load_dataset(name, device, size=10**6, calc_gt=False, mnt=True):
         return load_simple(device, "deep", calc_gt, mnt)
     elif name == "glove":
         return load_simple(device, "glove", calc_gt, mnt)
-    elif name == "boltalka_dssm":
-        return load_simple(device, "boltalka_dssm", calc_gt, mnt)
-    elif name == "kcd_t2t":
-        return load_simple(device, "kcd_t2t", calc_gt, mnt)
-    elif name == "kcd_visual":
-        return load_simple(device, "kcd_visual", calc_gt, mnt)
 
 
