@@ -64,9 +64,6 @@ def getBasedir(s, mnt=False):
         "gist": start + "data/gist/gist",
         "glove": start + "data/glove/glove",
         "deep": start + "data/deep/deep",
-        "boltalka_dssm": start + "data/boltalka_dssm/boltalka_dssm",
-        "kcd_visual": start + "data/kcd_visual/kcd_visual",
-        "kcd_t2t": start + "data/kcd_t2t/kcd_t2t",
         "uniform_low": start + "data/synthetic/"
     }
 
