@@ -13,7 +13,7 @@ import itertools
 # cpus = multiprocessing.cpu_count()
 # import ray
 
-from support_func import  loss_permutation,\
+from dim_red.support_func import  loss_permutation,\
                           loss_top_1_in_lat_top_k, normalize_numpy,\
                           get_nearestneighbors, sanitize, forward_pass, Normalize,\
                           get_nearestneighbors_partly, write_ivecs, save_transformed_data
