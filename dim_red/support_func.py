@@ -67,6 +67,7 @@ def get_nearestneighbors_torch(xq, xb, k, device, needs_exact=False, verbose=Fal
     I = I.cpu()
     return I.numpy()
 
+
 if hasfaiss:
     get_nearestneighbors = get_nearestneighbors_faiss
 else:
