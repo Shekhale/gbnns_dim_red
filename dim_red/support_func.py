@@ -1,17 +1,5 @@
-import multiprocessing
-cpus = multiprocessing.cpu_count()
-
 import matplotlib.pyplot as plt
-
-import heapq
 import random
-
-
-try:
-    import faiss
-    hasfaiss = True
-except:
-    hasfaiss = False
 
 import torch
 import torch.nn as nn
@@ -21,6 +9,12 @@ import time
 import itertools
 
 from dim_red.data import write_fvecs, write_ivecs
+
+try:
+    import faiss
+    hasfaiss = True
+except:
+    hasfaiss = False
 
 
 def get_nearestneighbors_faiss(xq, xb, k, device, needs_exact=True, verbose=False):
@@ -343,32 +337,6 @@ def get_weights(x, k, args):
     weights = [1 / d for d in distances]
     weights = weights / (sum(weights) / n)
     return weights
-
-
-def test_graph(x, graph, test_size=10**3):
-    n = x.shape[0]
-    k = graph.shape[1]
-    print(n, k)
-    wearegood = True
-    for i in range(test_size):
-        NN = []
-        for j in range(n):
-            if i != j:
-                dist = l2_dist(x[i], x[j])
-                heapq.heappush(NN, (-dist, j))
-                if len(NN) > k:
-                    heapq.heappop(NN)
-        NNset = set()
-        while len(NN) > 0:
-            dist, ind = heapq.heappop(NN)
-            NNset.add(ind)
-
-        if len(set(graph[i]) & NNset) < k:
-            print("Wrong graph", i, len(set(graph[i]) & NNset), len(set(graph[i])), len(NNset))
-            wearegood = False
-
-    if wearegood:
-        print("We are good")
 
 
 def calc_clasterization_coeff(graph, size=10**3, file_name=""):
