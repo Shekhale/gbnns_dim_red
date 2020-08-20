@@ -77,7 +77,6 @@ else:
 def sanitize(x):
     return np.ascontiguousarray(x, dtype='float32')
 
-
 # def save_ds(ds, net, args, file_name):
 #
 #     ds = torch.from_numpy(ds).to(args.device)
