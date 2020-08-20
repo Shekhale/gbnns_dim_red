@@ -316,14 +316,14 @@ int get_graphs_and_search_tests(char transform_type, char dataset, int d_p, int 
 
     string dir_d = path_data + "_base" + valid + ".fvecs";
     const char *data_dir = dir_d.c_str();  // path to data
-    string dir_q = path_data + "_query" + valid + ".fvecs"
+    string dir_q = path_data + "_query" + valid + ".fvecs";
     const char *query_dir = dir_q.c_str();  // path to data
     string dir_t = path_data + "_groundtruth" + valid + ".ivecs";
     const char *truth_dir = dir_t.c_str();  // path to data
 
     string dir_d_low = path_data + "_base_"  + file_name + valid + ".fvecs";
     const char *data_low_dir = dir_d_low.c_str();  // path to data
-    string dir_q_low = path_data + "_query_"  + file_name + valid + ".fvecs"
+    string dir_q_low = path_data + "_query_"  + file_name + valid + ".fvecs";
     const char *query_low_dir = dir_q_low.c_str();  // path to data
 
     string edge_knn_low_dir_s = path_models + "knn_1k_" + file_name + valid + ".ivecs";
