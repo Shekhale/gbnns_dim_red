@@ -254,35 +254,34 @@ void get_real_tests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs,
 int get_graphs_and_search_tests(char transform_type, char dataset, int d_p, int d_low_p, int n_q_p, char val, int n_val,
                                 bool reverse_gd) {
 
-    string file_name = string("");
+    string file_name = "";
     if (transform_type == 't') {
-        file_name = string("triplet_wrap");
+        file_name = "triplet_wrap";
     } else if (transform_type == 'p') {
-        file_name = string("pca");
+        file_name = "pca";
     }
 
     int gd_graph_size = 50;
     vector<int> efs(0);
-    string dataset_name = string("");
+    string dataset_name = "";
     if (dataset == 's') {
-        dataset_name = string("sift");
+        dataset_name = "sift";
         efs.push_back(150);
     } else if (dataset == 'g') {
-        dataset_name = string("gist");
+        dataset_name = "gist";
         efs.push_back(250);
         efs.push_back(500);
     } else if (dataset == 'w') {
-        dataset_name = string("glove");
+        dataset_name = "glove";
         efs.push_back(500);
-//        efs.push_back(1000);
         gd_graph_size = 50;
     } else if (dataset == 'd') {
-        dataset_name = string("deep");
+        dataset_name = "deep";
         efs.push_back(100);
         efs.push_back(150);
     }
 
-    string valid = string("");
+    string valid = "";
     if (val == 'v') {
         valid = "_valid";
     }
