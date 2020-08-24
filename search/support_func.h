@@ -372,27 +372,29 @@ vector< vector<uint32_t> > hnswlikeGD(vector< vector<uint32_t> > &graph, const f
                               int M,  size_t N, size_t d, Metric *metric, bool reverse) {
 
     vector< vector<uint32_t> > gd_graph(N);
+
+    int edge = 10;
 #pragma omp parallel for
-    for (int i=0; i < N; ++i) {
+    for (uint32_t i=0; i < N; ++i) {
         vector<neighbor> neighbors;
         const float* point_i = ds + i * d;
-        for (int j=0; j < graph[i].size(); ++j) {
+        for (uint32_t j=0; j < graph[i].size(); ++j) {
             const float* point_cur = ds + graph[i][j] * d;
             float dist_i = metric->Dist(point_i, point_cur, d);
-            if (dist_i > 0.00001) {
+            if (dist_i > EPS) {
                 neighbor neig{graph[i][j], dist_i};
                 neighbors.push_back(neig);
             }
         }
         sort(neighbors.begin(), neighbors.end());
         gd_graph[i].push_back(neighbors[0].number);
-        for (int j=0; j < 5; ++j) {
-			gd_graph[i].push_back(neighbors[j].number);
-		}
-        for (int j=5; j < neighbors.size(); ++j) {
+//        for (uint32_t j=0; j < edge; ++j) {
+//			gd_graph[i].push_back(neighbors[j].number);
+//		}
+        for (uint32_t j=edge; j < neighbors.size(); ++j) {
             const float* point_pre = ds + neighbors[j].number * d;
             bool good = true;
-            for (int l=0; l < gd_graph[i].size(); ++l) {
+            for (uint32_t l=0; l < gd_graph[i].size(); ++l) {
                 const float* point_alr = ds + gd_graph[i][l] * d;
                 if (metric->Dist(point_pre, point_i, d) > metric->Dist(point_pre, point_alr, d)) {
                     good = false;
@@ -406,17 +408,49 @@ vector< vector<uint32_t> > hnswlikeGD(vector< vector<uint32_t> > &graph, const f
                 break;
             }
         }
+        for (uint32_t j=0; j < edge; ++j) {
+            if (find(gd_graph[i].begin(), gd_graph[i].end(), neighbors[j].number) == gd_graph[i].end()) {
+                gd_graph[i].push_back(neighbors[j].number);
+            }
+		}
+
     }
+
+//// NAIVE
+//    if (reverse) {
+//        vector< vector<uint32_t> > reverse_graph(N);
+//        for (uint32_t i=0; i < N; ++i) {
+//            for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
+//                if (reverse_graph[gd_graph[i][j]].size() < 2 * M) {
+//                    reverse_graph[gd_graph[i][j]].push_back(i);
+//                }
+//            }
+//        }
+//        gd_graph = GraphMerge(gd_graph, reverse_graph);
+//    }
+
+
+//// SMART
     if (reverse) {
         vector< vector<uint32_t> > reverse_graph(N);
-        for (int i=0; i < N; ++i) {
-            for (int j=0; j < gd_graph[i].size(); ++j) {
-                if (reverse_graph[gd_graph[i][j]].size() < 2 * M) {
-                    reverse_graph[gd_graph[i][j]].push_back(i);
+        for (uint32_t i=0; i < N; ++i) {
+            for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
+                reverse_graph[gd_graph[i][j]].push_back(i);
+            }
+        }
+
+        for (uint32_t i=0; i < N; ++i) {
+            if (reverse_graph[i].size() < M) {
+                for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
+                    uint32_t cand = gd_graph[i][j];
+                    if (gd_graph[cand].size() < 2 * M) {
+                        if (find(gd_graph[cand].begin(), gd_graph[cand].end(), i) == gd_graph[cand].end()) {
+                            gd_graph[cand].push_back(i);
+                        }
+                    }
                 }
             }
         }
-        gd_graph = GraphMerge(gd_graph, reverse_graph);
     }
 
     return gd_graph;
