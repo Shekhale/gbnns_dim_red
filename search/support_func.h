@@ -15,6 +15,8 @@
 #include <omp.h>
 #include <cassert>
 
+#include <algorithm>
+
 #include <limits>
 #include <sys/time.h>
 
@@ -39,11 +41,11 @@ using namespace std;
 float EPS = 1e-10;
 
 struct neighbor {
-    int number;
+    uint32_t number;
     float dist;
 
     size_t operator()(const neighbor &n) const {
-        size_t x = std::hash<int>()(n.number);
+        size_t x = std::hash<uint32_t>()(n.number);
 
         return x;
     }
@@ -95,35 +97,65 @@ public:
 
 class L2Metric : public Metric {
 public:
-    float Dist(const float *x, const float *y, size_t d) {
+    float Dist(const float *pVect1, const float *pVect2, size_t qty) {
+//    L2SqrSIMD4Ext(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
         float PORTABLE_ALIGN32 TmpRes[8];
-        size_t qty16 = d >> 4;
+//        float *pVect1 = (float *) pVect1v;
+//        float *pVect2 = (float *) pVect2v;
+//        size_t qty = *((size_t *) qty_ptr);
 
-        const float *pEnd1 = x + (qty16 << 4);
 
-        __m256 diff, v1, v2;
-        __m256 sum = _mm256_set1_ps(0);
+        size_t qty4 = qty >> 2;
 
-        while (x < pEnd1) {
-            v1 = _mm256_loadu_ps(x);
-            x += 8;
-            v2 = _mm256_loadu_ps(y);
-            y += 8;
-            diff = _mm256_sub_ps(v1, v2);
-            sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+        const float *pEnd1 = pVect1 + (qty4 << 2);
 
-            v1 = _mm256_loadu_ps(x);
-            x += 8;
-            v2 = _mm256_loadu_ps(y);
-            y += 8;
-            diff = _mm256_sub_ps(v1, v2);
-            sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+        __m128 diff, v1, v2;
+        __m128 sum = _mm_set1_ps(0);
+
+        while (pVect1 < pEnd1) {
+            v1 = _mm_loadu_ps(pVect1);
+            pVect1 += 4;
+            v2 = _mm_loadu_ps(pVect2);
+            pVect2 += 4;
+            diff = _mm_sub_ps(v1, v2);
+            sum = _mm_add_ps(sum, _mm_mul_ps(diff, diff));
         }
-        _mm256_store_ps(TmpRes, sum);
-        float res = TmpRes[0] + TmpRes[1] + TmpRes[2] + TmpRes[3] + TmpRes[4] + TmpRes[5] + TmpRes[6] + TmpRes[7];
-        return res;
+        _mm_store_ps(TmpRes, sum);
+        return TmpRes[0] + TmpRes[1] + TmpRes[2] + TmpRes[3];
     };
 };
+
+//class L2Metric : public Metric {
+//public:
+//    float Dist(const float *x, const float *y, size_t d) {
+//        float PORTABLE_ALIGN32 TmpRes[8];
+//        size_t qty16 = d >> 4;
+//
+//        const float *pEnd1 = x + (qty16 << 4);
+//
+//        __m256 diff, v1, v2;
+//        __m256 sum = _mm256_set1_ps(0);
+//
+//        while (x < pEnd1) {
+//            v1 = _mm256_loadu_ps(x);
+//            x += 8;
+//            v2 = _mm256_loadu_ps(y);
+//            y += 8;
+//            diff = _mm256_sub_ps(v1, v2);
+//            sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+//
+//            v1 = _mm256_loadu_ps(x);
+//            x += 8;
+//            v2 = _mm256_loadu_ps(y);
+//            y += 8;
+//            diff = _mm256_sub_ps(v1, v2);
+//            sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+//        }
+//        _mm256_store_ps(TmpRes, sum);
+//        float res = TmpRes[0] + TmpRes[1] + TmpRes[2] + TmpRes[3] + TmpRes[4] + TmpRes[5] + TmpRes[6] + TmpRes[7];
+//        return res;
+//    };
+//};
 
 
 class Angular : public Metric {
@@ -159,6 +191,17 @@ public:
         return  -_mm_cvtss_f32 (msum2);
     };
 };
+
+
+int FindGraphAverageDegree(vector< vector <uint32_t>> &graph) {
+    double ans = 0;
+    int n = graph.size();
+    for (int i=0; i < n; ++i) {
+        ans += graph[i].size();
+    }
+    return ans / n;
+}
+
 
 template<typename T>
 void readXvec(std::ifstream &in, T *data, const size_t d, const size_t n = 1)
@@ -202,9 +245,13 @@ void write_edges(const char *location, const std::vector<std::vector<uint32_t>> 
 }
 
 
-vector<std::vector<uint32_t>> load_edges(const char *location, std::vector<std::vector<uint32_t>> edges) {
+vector<std::vector<uint32_t>> load_edges(string location, uint32_t n, string edges_name) {
+//vector<std::vector<uint32_t>> load_edges(const char *location, std::vector<std::vector<uint32_t>> edges) {
     // std::cout << "Loading edges from " << location << std::endl;
-    std::ifstream input(location, std::ios::binary);
+    std::vector<std::vector<uint32_t>> edges(n);
+    const char *location_char = location.c_str();
+    std::ifstream input(location_char, std::ios::binary);
+//    std::ifstream input(location, std::ios::binary);
 
     uint32_t size;
     for (int i = 0; i < edges.size(); i++) {
@@ -217,6 +264,7 @@ vector<std::vector<uint32_t>> load_edges(const char *location, std::vector<std::
             edges[i].push_back(vec[j]);
         }
     }
+    cout <<  edges_name + " " << FindGraphAverageDegree(edges) << endl;
     return edges;
 }
 
@@ -242,14 +290,14 @@ vector<float> create_uniform_data(int N, int d, std::mt19937 random_gen) {
 vector<uint32_t> get_truth(vector<float> ds, vector<float> query, int N, int d, int N_q, Metric *metric) {
     vector<uint32_t> truth(N_q);
 #pragma omp parallel for
-    for (int i=0; i < N_q; ++i) {
+    for (uint32_t i=0; i < N_q; ++i) {
         const float* tendered_d = ds.data();
         const float* goal = query.data() + i*d;
         float dist = metric->Dist(tendered_d, goal, d);
         float new_dist = dist;
-        int tendered_num = 0;
-        for (int j=1; j<N; ++j) {
-            tendered_d += d;
+        uint32_t tendered_num = 0;
+        for (uint32_t j=1; j<N; ++j) {
+            tendered_d = ds.data() + j * d;
             new_dist = metric->Dist(tendered_d, goal, d);
             if (new_dist < dist) {
                 dist = new_dist;
@@ -278,17 +326,17 @@ vector< vector <uint32_t>> CutKNNbyThreshold(vector< vector <uint32_t>> &knn, ve
     return  knn_cut;
 }
 
-vector< vector <uint32_t>> CutKNNbyK(vector< vector <uint32_t>> &knn, vector<float> &ds, int knn_size, int N, int d,
+vector< vector <uint32_t>> CutKNNbyK(vector< vector <uint32_t>> &knn, const float* ds, int knn_size, int N, int d,
                                              Metric *metric) {
     vector< vector <uint32_t>> knn_cut(N);
     bool small_size = false;
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int i=0; i < N; ++i) {
         vector<neighbor> neigs;
-        const float* point_i = ds.data() + i*d;
+        const float* point_i = ds + i*d;
         for (int j=0; j < knn[i].size(); ++j) {
             int cur = knn[i][j];
-            const float *point_cur = ds.data() + cur*d;
+            const float *point_cur = ds + cur*d;
             neighbor neig{cur, metric->Dist(point_i, point_cur, d)};
             neigs.push_back(neig);
         }
@@ -334,13 +382,15 @@ vector< vector <uint32_t>> CutKL(vector< vector <uint32_t>> &kl, int l, int N, v
 }
 
 
-int FindGraphAverageDegree(vector< vector <uint32_t>> &graph) {
-    double ans = 0;
+int FindGraphMaxDegree(vector< vector <uint32_t>> &graph) {
+    int max = 0;
     int n = graph.size();
     for (int i=0; i < n; ++i) {
-        ans += graph[i].size();
+        if (max < graph[i].size()) {
+            max = graph[i].size();
+        }
     }
-    return ans / n;
+    return max;
 }
 
 
@@ -368,12 +418,133 @@ vector< vector<uint32_t> > GraphMerge(vector< vector<uint32_t> > &graph_f, vecto
 }
 
 
+vector< vector<uint32_t> > AddReverseEdgesForGD(vector< vector<uint32_t> > &gd_graph, const float* ds,
+                               int M,  size_t N, size_t d, Metric *metric) {
+//// NAIVE
+//    vector< vector<uint32_t> > reverse_graph(N);
+//    for (uint32_t i=0; i < N; ++i) {
+//        for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
+//            if (reverse_graph[gd_graph[i][j]].size() < 2 * M) {
+//                reverse_graph[gd_graph[i][j]].push_back(i);
+//            }
+//        }
+//    }
+//    gd_graph = GraphMerge(gd_graph, reverse_graph);
+
+//// SMART
+
+    vector< vector<uint32_t> > reverse_graph(N);
+    for (uint32_t i=0; i < N; ++i) {
+        for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
+            reverse_graph[gd_graph[i][j]].push_back(i);
+        }
+    }
+    for (uint32_t i=0; i < N; ++i) {
+        int upper_bound = M - reverse_graph[i].size();
+        int reverse_threshold = min(upper_bound, M/2);
+//            int reverse_threshold = static_cast<int>(M/2);
+//            if (reverse_graph[i].size() < M) {
+        if (reverse_threshold > 0) {
+            for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
+                uint32_t cand = gd_graph[i][j];
+                if (gd_graph[cand].size() < 2 * M) {
+                    if (find(gd_graph[cand].begin(), gd_graph[cand].end(), i) == gd_graph[cand].end()) {
+                        gd_graph[cand].push_back(i);
+                        reverse_threshold -= 1;
+                        if (reverse_threshold <= 0) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return gd_graph;
+}
+
+
+void check_const_degree(vector< vector<uint32_t> > &graph) {
+    if (graph.size() == 0) {
+        return;
+    }
+    int degree = graph[0].size();
+    bool failed = false;
+#pragma omp parallel for
+    for (uint32_t i=0; i < graph.size(); ++i) {
+        if (graph[i].size() != degree) {
+            failed = true;
+        }
+    }
+    if (failed) {
+        cout << " Graph degree is not constant " << endl;
+    }
+}
+
+
+vector< vector<uint32_t> > GetConstantDegreeForGD(vector< vector<uint32_t> > &graph, const float* ds,
+                               vector< vector<uint32_t> > &gd_graph,
+                               int M,  size_t N, size_t d, Metric *metric) {
+
+#pragma omp parallel for
+    for (uint32_t i=0; i < N; ++i) {
+        if (gd_graph[i].size() < 2 * M) {
+            for (uint32_t j=1; j < graph[i].size(); ++j) {
+                if (find(gd_graph[i].begin(), gd_graph[i].end(), graph[i][j]) == gd_graph[i].end()) {
+                    gd_graph[i].push_back(graph[i][j]);
+                    if (gd_graph[i].size() == 2 * M) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    check_const_degree(gd_graph);
+    return gd_graph;
+}
+
+
+
+vector< vector<uint32_t> > FillGraphToConstantDegree(vector< vector<uint32_t> > &graph,
+                               vector< vector<uint32_t> > &wide_graph, int degree_needed) {
+
+    int max_degree = 0;
+    int N = graph.size();
+    for (uint32_t i=0; i < N; ++i) {
+        if (graph[i].size() > max_degree) {
+            max_degree = graph[i].size();
+        }
+    }
+    if (degree_needed < max_degree) {
+        degree_needed = max_degree;
+    }
+
+#pragma omp parallel for
+    for (uint32_t i=0; i < N; ++i) {
+        if (graph[i].size() < degree_needed) {
+            for (uint32_t j=0; j < wide_graph[i].size(); ++j) {
+                if (find(graph[i].begin(), graph[i].end(), wide_graph[i][j]) == graph[i].end()) {
+                    graph[i].push_back(wide_graph[i][j]);
+                    if (graph[i].size() == degree_needed) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    check_const_degree(graph);
+    return graph;
+}
+
+
 vector< vector<uint32_t> > hnswlikeGD(vector< vector<uint32_t> > &graph, const float* ds,
-                              int M,  size_t N, size_t d, Metric *metric, bool reverse) {
+                              int M,  size_t N, size_t d, Metric *metric, bool reverse,
+                              bool need_const_degree) {
 
     vector< vector<uint32_t> > gd_graph(N);
 
-    int edge = 10;
+//    int edge = 5;
+    int edge = static_cast<int>(M/2);
 #pragma omp parallel for
     for (uint32_t i=0; i < N; ++i) {
         vector<neighbor> neighbors;
@@ -388,15 +559,12 @@ vector< vector<uint32_t> > hnswlikeGD(vector< vector<uint32_t> > &graph, const f
         }
         sort(neighbors.begin(), neighbors.end());
         gd_graph[i].push_back(neighbors[0].number);
-//        for (uint32_t j=0; j < edge; ++j) {
-//			gd_graph[i].push_back(neighbors[j].number);
-//		}
-        for (uint32_t j=edge; j < neighbors.size(); ++j) {
+        for (uint32_t j=1; j < neighbors.size(); ++j) {
             const float* point_pre = ds + neighbors[j].number * d;
             bool good = true;
             for (uint32_t l=0; l < gd_graph[i].size(); ++l) {
                 const float* point_alr = ds + gd_graph[i][l] * d;
-                if (metric->Dist(point_pre, point_i, d) > metric->Dist(point_pre, point_alr, d)) {
+                if (metric->Dist(point_pre, point_i, d) + EPS > metric->Dist(point_pre, point_alr, d)) {
                     good = false;
                     break;
                 }
@@ -413,67 +581,25 @@ vector< vector<uint32_t> > hnswlikeGD(vector< vector<uint32_t> > &graph, const f
                 gd_graph[i].push_back(neighbors[j].number);
             }
 		}
-
     }
 
-//// NAIVE
-//    if (reverse) {
-//        vector< vector<uint32_t> > reverse_graph(N);
-//        for (uint32_t i=0; i < N; ++i) {
-//            for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
-//                if (reverse_graph[gd_graph[i][j]].size() < 2 * M) {
-//                    reverse_graph[gd_graph[i][j]].push_back(i);
-//                }
-//            }
-//        }
-//        gd_graph = GraphMerge(gd_graph, reverse_graph);
-//    }
-
-
-//// SMART
     if (reverse) {
-        vector< vector<uint32_t> > reverse_graph(N);
-        for (uint32_t i=0; i < N; ++i) {
-            for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
-                reverse_graph[gd_graph[i][j]].push_back(i);
-            }
-        }
+        gd_graph = AddReverseEdgesForGD(gd_graph, ds, M, N, d, metric);
+    }
 
-        for (uint32_t i=0; i < N; ++i) {
-            if (reverse_graph[i].size() < M) {
-                for (uint32_t j=0; j < gd_graph[i].size(); ++j) {
-                    uint32_t cand = gd_graph[i][j];
-                    if (gd_graph[cand].size() < 2 * M) {
-                        if (find(gd_graph[cand].begin(), gd_graph[cand].end(), i) == gd_graph[cand].end()) {
-                            gd_graph[cand].push_back(i);
-                        }
-                    }
-                }
-            }
-        }
+    if (need_const_degree) {
+        gd_graph = GetConstantDegreeForGD(graph, ds, gd_graph, M, N, d, metric);
     }
 
     return gd_graph;
 }
 
 
-vector< vector<uint32_t> > FindBadNodes(vector< vector<uint32_t> > &graph, const float* ds,
-                              int M,  size_t N, size_t d, Metric *metric, bool reverse) {
+std::vector<std::string> SplitString(const std::string& str, char delimiter) {
 
-#pragma omp parallel for
-    for (int i=0; i < N; ++i) {
-        if (graph[i].size() != M) {
-            cout << graph[i].size() << ' ' << i << endl;
-        }
-    }
-
-}
-
-
-std::vector<std::string> SplitString(const std::string& s, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
-    std::istringstream tokenStream(s);
+    std::istringstream tokenStream(str);
     while (std::getline(tokenStream, token, delimiter)) {
         tokens.push_back(token);
     }
@@ -485,7 +611,7 @@ std::map<std::string, std::string> AddMapFromStr(std::string str, std::map<std::
                                                  std::string global_key) {
     char delimiter(' ');
     std::vector<string> str_sep = SplitString(str, delimiter);
-    if (str_sep[0] == global_key and str_sep.size() == 3) {
+    if (str_sep.size() > 0 and str_sep[0] == global_key and str_sep.size() == 3) {
         params_map[str_sep[1]] = str_sep[2];
     }
     return params_map;
@@ -494,11 +620,9 @@ std::map<std::string, std::string> AddMapFromStr(std::string str, std::map<std::
 
 std::map<std::string, std::string> ReadSearchParams(std::string file_name, std::string database_name) {
     std::map<std::string, std::string> params_map;
-
     std::ifstream file(file_name);
     std::string str;
-    while (std::getline(file, str))
-    {
+    while (std::getline(file, str)) {
         params_map = AddMapFromStr(str, params_map, database_name);
     }
 
@@ -506,12 +630,74 @@ std::map<std::string, std::string> ReadSearchParams(std::string file_name, std::
 }
 
 
-vector<uint32_t> VectorFromString(string str) {
-    vector<uint32_t> ans;
+vector<int> VectorFromString(string str) {
+    vector<int> ans;
     vector<string> str_sep = SplitString(str, ',');
     for (int i = 0; i < str_sep.size(); ++i) {
-    ans.push_back(atoi(str_sep[i]));
+        ans.push_back(atoi(str_sep[i].c_str()));
     }
 
     return ans;
+}
+
+
+void PrintFirst(vector<float> &ds, int start, int len) {
+    for (int i = start; i < start + len; ++i) {
+        cout << ds[i] << ' ';
+
+    }
+    cout << endl;
+}
+
+
+void net_layer_compute(const float* matrix, const float* input, vector<float> &output, bool activation,
+                       int step, int d_in, int d_out, Metric *ang) {
+    for (int i = 0; i < d_out; ++i) {
+        output[i] -=  ang->Dist(matrix + i * step, input, d_in);
+        output[i] += *(matrix + i * step + step - 1);
+        if ( activation && output[i] < 0) {
+            output[i] = 0;
+        }
+    }
+}
+
+
+void normalize_vector(vector<float> &input, const float* zeros, int d, Metric *l2) {
+    float norm = l2->Dist(input.data(), zeros, d);
+//    float norm = 0;
+//    for (int i = 0; i < d; ++i) {
+//        norm += input[i] * input[i];
+//    }
+    norm = sqrt(norm);
+    for (int i = 0; i < d; ++i) {
+        input[i] /= norm;
+    }
+}
+
+
+void get_low_query_from_net_3(const float* matrix_1,  const float* matrix_2, const float* matrix_3,
+                              const float* query, vector<float> &ans, const float* zeros,
+                              size_t d, size_t d_hidden, size_t d_hidden_2, size_t d_low, Metric *ang, Metric *l2) {
+
+    vector<float> hidden_layer(d_hidden);
+    net_layer_compute(matrix_1, query, hidden_layer, true, d + 1, d, d_hidden, ang);
+
+    vector<float> hidden_2_layer(d_hidden_2);
+    net_layer_compute(matrix_2, hidden_layer.data(), hidden_2_layer, true, d_hidden + 1, d_hidden, d_hidden_2, ang);
+
+    net_layer_compute(matrix_3, hidden_2_layer.data(), ans, false, d_hidden_2 + 1, d_hidden_2, d_low, ang);
+
+    normalize_vector(ans, zeros, d_low, l2);
+
+}
+
+
+template<typename T>
+vector<T> loadXvecs(string data_path, const size_t d, const size_t n = 1) {
+    vector<T> data(n * d);
+    const char *data_path_char = data_path.c_str();
+    std::ifstream data_input(data_path_char, std::ios::binary);
+    readXvec<T>(data_input, data.data(), d, n);
+
+    return data;
 }
