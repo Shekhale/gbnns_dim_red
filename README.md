@@ -1,4 +1,4 @@
-## New method for NNS based on Reducing Dimensionality
+## Reducing Dimensionality technic for NNS based
 
 and code for reproducing experiments from ICML2020 [paper](https://proceedings.icml.cc/static/paper_files/icml/2020/1229-Paper.pdf)
 
@@ -10,11 +10,10 @@ and code for reproducing experiments from ICML2020 [paper](https://proceedings.i
  Graph-based NNS is performed in a low-dimensional space and several best candidates are then evaluated in the original space.
  Searching in the low-dimensional space is faster since distances can be computed more efficiently.
  Also, while learning the mapping, we enhance the distribution of points with desired properties, which further improves graph-based search. 
-We perform a thorough analysis of different heuristics that can be used to improve NNS algorithms and enrich our method with the most promising ones.
-As a result, we get a new state-of-the-art NNS algorithm.
+You can combine this method with any graph-based structure like [HNSW](https://github.com/nmslib/hnswlib) or [NGT](https://github.com/yahoojapan/NGT).
 
 #### Files description and run examples
-First, you need to specify paths to prospective data location in following files and `dim_red/data.py`
+First, you need to specify paths to prospective data location in the following files and `dim_red/data.py`
 
 `train.py` file aggregate different techniques for dimensionality reducing from **dim_red** folder. To learn your favorite method you need to specify it with other learning parameters.
 For example, 
@@ -22,37 +21,48 @@ For example,
 ```sh
 $ python train.py --database sift --method triplet --dout 32 --epochs 40 --batch_size 512
 ```
- will be learns transformation in low dimension, save network and transformed dataset, create pytorch's script for search and finally will build `knn_1k_triplet.ivecs` graph as a base for more complicated ones.
+ will learn transformation in low dimension, save network (as classic PyTorch net and as matrixes for the following search) and transformed dataset.
 
-As you can see from paper, method selecting is not trivial task. In our view, the best method to solve NNS problem for real-world (often huge) datasets located in `best_of_our_knowledge.py`. 
+If you want to additionally monitor the **search** accuracy of representation, set `val_freq_search` parameter more then 0 and see `wrap/wrap_readme.txt` for additional instruction.
 
-When transformation is learned you need to build the desired graphs via `search/prepare_graph.cpp`, that will be use all available CPU.
+When a transformation is learned you need to build your favorite graph for low-dimensional data.
+A possible solution is to use `search/prepare_graph.cpp`, which will use all available CPU and needed to specify '--save_knn_1k' parameter to 1 in the previous command.
 
 Next run 
 ```sh
-$ cd search/build
-$ cmake -DCMAKE_PREFIX_PATH=/path/to/libtorch ..
-$ cmake --build . --config Release
-$ make
-$ OMP_NUM_THREADS=1 ./cpu_only_test w
+$ g++ -Ofast -std=c++11 -fopenmp -march=native -fpic -w -ftree-vectorize final_test.cpp
+$ ./a.out sift
 ```
-The last will started search procedure which will finally print and save results.
+The last will start the searching procedure which will finally print and save results.
  
-For more details and instructions about loading a torchscript model in C++ see Pytorch [tutorial](https://pytorch.org/tutorials/advanced/cpp_export.html)
+For draw results, you can use `results/draw_results.ipynb` notebook.
 
-For draw results you can use `results/draw_results.ipynb` notebook.
+##### Learn | search faster 
+If you want to further accelerate the code for learning, you can install [Faiss](https://github.com/facebookresearch/faiss) with GPU support
 
-##### Requirements 
-If you want to further accelerate the code, you can install [Faiss](https://github.com/facebookresearch/faiss) with GPU support
+You can make the search procedure faster if use:
 
-for (other) needed libs see `requirements.txt`
+ - thinner or shorter net for transformation
+
+ - the better realization for matrix product
+
+##### Learn better
+For most task `triplet` method quiet enough, but if you:
+
+ - want lightly increase the quality of representation 
+
+ - (!) planning or must use **fixed** (the same) graph in low dimension
+
+we recommend using `angular` method
+
+
+#### Some results
+
+![img](https://github.com/Shekhale/gbnns_dim_red/raw/master/results/real_datasets_results.png)
 
 
 #### Naive learning for ICML2020 paper
- `train_naive_triplet.py` - main file for reproducing results from ICLM paper. It learns transformation in low dimension, save transformed dataset and build knn graph for search.
- Next you must execute `naive_test.cpp` from **search** folder 
+ `train_naive_triplet.py` - main file for reproducing results from ICLM paper.
+ It learns transformation in low dimension, saves transformed dataset, and builds kNN graph for search.
+ Next, you must execute `naive_test.cpp` from **search** folder with a corresponding setup 
  
-```sh
-$ g++ -Ofast -std=c++11 -fopenmp -march=native -fpic -w -ftree-vectorize naive_test.cpp
-$ ./a.out
-```
