@@ -20,7 +20,7 @@ First, you need to specify paths to prospective data location in following files
 For example, 
 
 ```sh
-$ python train.py --database sift --method triplet --dout 32 --epochs 40 --batch_size 512`. 
+$ python train.py --database sift --method triplet --dout 32 --epochs 40 --batch_size 512
 ```
  will be learns transformation in low dimension, save network and transformed dataset, create pytorch's script for search and finally will build `knn_1k_triplet.ivecs` graph as a base for more complicated ones.
 
