@@ -1,6 +1,7 @@
 from os.path import join
 # from support_func import get_nearestneighbors, sanitize
 import numpy as np
+from struct import pack, unpack
 from struct import pack
 
 
@@ -36,10 +37,27 @@ def write_edges_list(filename, edges):
             f.write(pack('i' * dim, *list(to_vertex_ids)))
 
 
-def ivecs_read(fname):
-    a = np.fromfile(fname, dtype='int32')
-    d = a[0]
-    return a.reshape(-1, d + 1)[:, 1:].copy()
+def read_ivecs(filename, max_size=None):
+    max_size = max_size or float('inf')
+    with open(filename, "rb") as f:
+        vecs = []
+        while True:
+            header = f.read(4)
+            if not len(header): break
+            dim, = unpack('<i', header)
+            vec = unpack('i' * dim, f.read(4 * dim))
+            vecs.append(vec)
+            if len(vecs) >= max_size: break
+    maxl = 0
+    for vec in vecs:
+        maxl = max(maxl, len(vec))
+    # print(maxl)
+    ans = np.zeros((len(vecs), maxl), dtype="int32")
+    for i in range(len(vecs)):
+        for j in range(len(vecs[i])):
+            ans[i][j] = vecs[i][j]
+
+    return ans
 
 
 def mmap_fvecs(fname):

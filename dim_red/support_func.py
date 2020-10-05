@@ -281,21 +281,6 @@ def loss_top_1_in_lat_top_k(xs, x, ys, y, args, kx, ky, size, name, fake_args=Fa
     return ans_in_top_neg / top1_x.shape[0]
 
 
-def loss_top_1_in_lat_top_k_new(gt, yb, yq, args, k):
-    k_nn_yq = get_nearestneighbors(yq, yb, 2*k, args.device, needs_exact=True)
-    ans_in_top_100 = 0
-    ans_in_top_50 = 0
-    for i in range(len(yq)):
-        if gt[i, 0] in k_nn_yq[i]:
-            ans_in_top_100 += 1
-        if gt[i, 0] in k_nn_yq[i][:k]:
-            ans_in_top_50 += 1
-    print('QUERY: Part of gt in gt_lat_%d = %.4f' % (k, ans_in_top_50 / len(yq)))
-    print('QUERY: Part of gt in gt_lat_%d = %.4f' % (2*k, ans_in_top_100 / len(yq)))
-
-    return ans_in_top_50 / len(yq), ans_in_top_100 / len(yq)
-
-
 def show_neighbours_distr(x, k, args, hist_steps=10, print_in_file=False, file_name=""):
     n = x.shape[0]
     knn = get_nearestneighbors(x, x, k, args.device, needs_exact=True)
@@ -527,3 +512,84 @@ def pairwise_NNs_inner(x):
     dots.view(-1)[::(n + 1)].fill_(-1)  # Trick to fill diagonal with -1
     _, I = torch.max(dots, 1)  # max inner prod -> min distance
     return I
+
+
+def save_layer(matrix, bias, path):
+    # print(matrix.shape)
+    # print(bias.shape)
+    bias = bias.reshape((matrix.shape[0], 1))
+    # print(bias.shape)
+    layer = np.concatenate((matrix, bias), axis=1)
+    # print(layer.shape)
+
+    write_fvecs(path, layer)
+
+
+def prepare_net_layer(net, start, path, withBN=True):
+    params = list(net.state_dict().keys())
+    matrix = net.state_dict()[params[start + 0]].detach().cpu().numpy()
+    bias = net.state_dict()[params[start + 1]].detach().cpu().numpy()
+    if withBN:
+        bn_gamma = net.state_dict()[params[start + 2]].detach().cpu().numpy()
+        bn_beta = net.state_dict()[params[start + 3]].detach().cpu().numpy()
+
+        bn_mean = net.state_dict()[params[start + 4]].detach().cpu().numpy()
+        bn_var = net.state_dict()[params[start + 5]].detach().cpu().numpy()
+
+        for i in range(matrix.shape[0]):
+            for j in range(matrix.shape[1]):
+                matrix[i, j] *= bn_gamma[i]
+                matrix[i, j] /= np.sqrt(bn_var[i])
+            bias[i] -= bn_mean[i]
+            bias[i] *= bn_gamma[i]
+            bias[i] /= np.sqrt(bn_var[i])
+            bias[i] += bn_beta[i]
+
+    save_layer(matrix, bias, path)
+
+
+def save_net_as_matrix(net, path):
+    net.eval()
+    prepare_net_layer(net, 0, path + "_1.fvecs")
+    prepare_net_layer(net, 7, path + "_2.fvecs")
+    prepare_net_layer(net, 14, path + "_3.fvecs", withBN=False)
+
+
+def ifelse(default, custom_list):
+    params_list = list()
+    if default != 0:
+        params_list.append(default)
+    else:
+        params_list = custom_list
+    return params_list
+
+
+def stopping_time(acc, eps):
+    if len(acc) < 3:
+        return False
+    max_acc = max(acc[:-2])
+    if max_acc < max(acc[-2:]):
+        return False
+    if acc[-1] < max_acc + eps:
+        return True
+
+    return False
+
+
+def validation_function(net, xt, xv, xq, args, val_k):
+    logs = {}
+    net.eval()
+    yt = forward_pass(net, xt, 1024)
+    yv = forward_pass(net, xv, 1024)
+    logs['perm'] = loss_permutation(xt, yt, args, k=val_k, size=10**4)
+
+    logs['train_top1_k'] = loss_top_1_in_lat_top_k(xt, xt, yt, yt, args, 2, val_k, size=10**5, name="TRAIN")
+    logs['valid_top1_k'] = loss_top_1_in_lat_top_k(xv, xt, yv, yt, args, 1, val_k, size=10**5, name="VALID")
+
+    yq = forward_pass(net, xq, 1024)
+    logs['query_top1_k'] = loss_top_1_in_lat_top_k(xq, xt, yq, yt, args, 1, val_k, size=10**4, name="QUERY_tr")
+    logs['query_top1_2k'] = loss_top_1_in_lat_top_k(xq, xt, yq, yt, args, 1, 2*val_k, size=10**4, name="QUERY_tr")
+
+    net.train()
+
+    return logs
