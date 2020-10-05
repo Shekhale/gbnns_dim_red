@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     std::random_device device;
     random_gen.seed(device());
 
-    string params_path = "/home/shekhale/dim-red/search/parameters_of_databases.txt";
+    string params_path = "/home/shekhale/gbnns_dim_red/search/parameters_of_databases.txt";
     std::map<std::string, std::string> params_map = ReadSearchParams(params_path, dataset_name);
 
     const size_t n = atoi(params_map["n"].c_str());
