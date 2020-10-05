@@ -1,4 +1,4 @@
-## Reducing Dimensionality technic for NNS based
+## Reducing Dimensionality method for Nearest Neighbor Search
 
 and code for reproducing experiments from ICML2020 [paper](https://proceedings.icml.cc/static/paper_files/icml/2020/1229-Paper.pdf)
 
@@ -63,6 +63,7 @@ we recommend using `angular` method
 
 #### Naive learning for ICML2020 paper
  `train_naive_triplet.py` - main file for reproducing results from ICLM paper.
- It learns transformation in low dimension, saves transformed dataset, and builds kNN graph for search.
- Next, you must execute `naive_test.cpp` from **search** folder with a corresponding setup 
+ It learns transformation in low dimension, saves transformed dataset,
+ and builds kNN graph for search.
+ Next, you must execute `search/naive_test.cpp` with a corresponding setup.
  
