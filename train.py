@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from dim_red.triplet import train_triplet
+from dim_red.angular import train_angular
 from wrap.triplet_wrap import train_triplet as train_triplet_wrap
 
 from dim_red.support_func import  sanitize
@@ -32,6 +33,10 @@ if __name__ == '__main__':
     aa("--print_results", type=int, default=0)
     aa("--save", type=int, default=0)
     aa("--full", type=int, default=0)
+    aa("--val_freq_search", type=int, default=5,
+       help="frequency of validation calls")
+    aa("--save_knn_1k", type=int, default=0)
+    aa("--save_optimal", type=int, default=0)
     aa("--batch_size", type=int, default=64)
     aa("--epochs", type=int, default=40)
     aa("--lr_schedule", type=str, default="0.1,0.1,0.05,0.01")
@@ -57,11 +62,11 @@ if __name__ == '__main__':
     (_, xb, xq, _) = load_dataset(args.database, args.device, calc_gt=False, mnt=True)
 
     base_size = xb.shape[0]
-    threshold = int(base_size * 0.1)
+    threshold = int(base_size * 0.01)
     perm = np.random.permutation(base_size)
     xv = xb[perm[:threshold]]
     if args.full:
-        xt = xb[perm]
+        xt = xb
     else:
         xt = xb[perm[threshold:]]
 
@@ -74,7 +79,7 @@ if __name__ == '__main__':
 
     if args.method == "triplet":
         train_triplet(xb, xt, xv, xq, args, results_file_name)
-    elif args.method == "triplet_wrap":
-        train_triplet_wrap(xb, xt, xv, xq, args, results_file_name)
+    elif args.method == "angular":
+        train_angular(xb, xt, xv, xq, args, results_file_name, perm)
     else:
         print("Select an available method")
