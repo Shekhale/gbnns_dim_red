@@ -5,7 +5,6 @@ import torch
 
 from dim_red.triplet import train_triplet
 from dim_red.angular import train_angular
-from wrap.triplet_wrap import train_triplet as train_triplet_wrap
 
 from dim_red.support_func import  sanitize
 from dim_red.data import load_dataset

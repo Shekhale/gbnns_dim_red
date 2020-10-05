@@ -11,10 +11,7 @@ from dim_red.support_func import  loss_permutation, loss_top_1_in_lat_top_k, nor
     repeat, pairwise_NNs_inner,get_nearestneighbors_partly, save_transformed_data, ifelse, validation_function,\
     save_net_as_matrix
 
-
 from dim_red.data import write_fvecs, write_ivecs
-
-import wrap.c_support as c_support
 
 net_style = "triplet"
 
@@ -142,6 +139,7 @@ def triplet_optimize(xt, xv, gt_nn, xq, net, args, lambda_uniform, k_pos, k_neg,
         logs['times'] = (t1 - t0, t2 - t1, t3 - t2)
 
         if args.val_freq_search > 0 and ((epoch + 1) % args.val_freq_search == 0 or epoch == args.epochs - 1):
+            import wrap.c_support as c_support
             net.eval()
             dim = xt.shape[1]
             yt = forward_pass(net, xt, 1024)
@@ -151,7 +149,7 @@ def triplet_optimize(xt, xv, gt_nn, xq, net, args, lambda_uniform, k_pos, k_neg,
                                   args.device)
             save_transformed_data(xv, net, args.database + "/" + args.database + "_query_" + net_style + valid + ".fvecs",
                                   args.device)
-            acc_cur = c_support.get_graphs_and_search_tests("t", dfl, dim, args.dout, xq.shape[0], valid_char, xt.shape[0], True)
+            acc_cur = c_support.get_graphs_and_search_tests("t", dfl, dim, args.dout, xq.shape[0], valid_char, xt.shape[0], False)
             acc_cur = round(acc_cur, 5)
             if args.save_optimal > 0:
                 if len(acc) > 0 and acc_cur > max(acc):

@@ -10,11 +10,9 @@ from dim_red.support_func import  loss_permutation, loss_top_1_in_lat_top_k, nor
                           repeat, pairwise_NNs_inner,get_nearestneighbors_partly, save_transformed_data, ifelse,\
     validation_function, save_net_as_matrix
 
-from dim_red.data import ivecs_read, read_ivecs, write_fvecs, write_ivecs
+from dim_red.data import ivecs_read, read_ivecs, write_fvecs, write_ivec
 
-import wrap.c_support as c_support
-
-net_style = "angular_wrap"
+net_style = "angular"
 
 
 def get_graph_dot_prod(graph_cur, xt_var):
@@ -180,6 +178,7 @@ def angular_optimize(xt, xv, xq, net, args, lambda_uniform, lambda_triplet, lamb
         all_logs.append(logs)
 
         if args.val_freq_search > 0 and ((epoch + 1) % args.val_freq_search == 0 or epoch == args.epochs - 1):
+            import wrap.c_support as c_support
             net.eval()
             dim = xt.shape[1]
             yt = forward_pass(net, xt, 1024)
@@ -193,7 +192,7 @@ def angular_optimize(xt, xv, xq, net, args, lambda_uniform, lambda_triplet, lamb
             else:
                 save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + net_style + ".fvecs",
                                       args.device)
-            acc_cur = c_support.search_on_fixed_graph_tests("a", dfl, dim, args.dout, xq.shape[0], valid_char,
+            acc_cur = c_support.get_graphs_and_search_tests("a", dfl, dim, args.dout, xq.shape[0], valid_char,
                                                             xt.shape[0], 0, False)
             acc_cur = round(acc_cur, 5)
             if args.save_optimal > 0:
