@@ -44,7 +44,9 @@ You can make the search procedure faster if use:
 
  - thinner or shorter net for transformation
 
- - the better realization for matrix product
+ - the better implemented of matrix multiplication for net application (not implemented) 
+ 
+ - fast matrix multiplication for re-ranking best elements from a low-dimensional space in original (not implemented) 
 
 ##### Learn better
 For most task `triplet` method quiet enough, but if you:
