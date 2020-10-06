@@ -293,7 +293,7 @@ def train_angular(xb, xt, xv, xq, args, results_file_name, perm):
                     (args.database, xt.shape[0], args.batch_size, args.dout, val_k, len(list(net.state_dict().keys()))))
                 rfile.write(
                     "lam_u = %.7f, lam_tr = %.7f, lam_ang = %.3f, r_pos = %d, r_neg = %d, dint = %d, rgs = %s \n" %
-                    (lambda_uniform, lambda_triplet, lambda_ang, ranks_pos[0], ranks_neg[0], dint, rgs))
+                    (lambda_uniform, lambda_triplet, lambda_ang, k_pos, k_neg, dint, rgs))
 
                 log = all_logs[-1]
                 rfile.write(
