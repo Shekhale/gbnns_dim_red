@@ -5,12 +5,11 @@ from torch import nn, optim
 import torch.nn.functional as F
 import torch
 
-from dim_red.support_func import  loss_permutation, loss_top_1_in_lat_top_k, normalize_numpy,\
-                          get_nearestneighbors, sanitize, forward_pass, Normalize, stopping_time,\
-                          repeat, pairwise_NNs_inner,get_nearestneighbors_partly, save_transformed_data, ifelse,\
+from dim_red.support_func import  forward_pass, Normalize, stopping_time,\
+    repeat, get_nearestneighbors_partly, save_transformed_data, ifelse,\
     validation_function, save_net_as_matrix
 
-from dim_red.data import ivecs_read, read_ivecs, write_fvecs, write_ivec
+from dim_red.data import write_fvecs
 
 net_style = "angular"
 

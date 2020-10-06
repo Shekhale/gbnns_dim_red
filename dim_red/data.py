@@ -37,6 +37,12 @@ def write_edges_list(filename, edges):
             f.write(pack('i' * dim, *list(to_vertex_ids)))
 
 
+def ivecs_read(fname):
+    a = np.fromfile(fname, dtype='int32')
+    d = a[0]
+    return a.reshape(-1, d + 1)[:, 1:].copy()
+
+
 def read_ivecs(filename, max_size=None):
     max_size = max_size or float('inf')
     with open(filename, "rb") as f:
