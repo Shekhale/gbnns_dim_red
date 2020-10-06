@@ -23,7 +23,7 @@ $ python train.py --database sift --method triplet --dout 32 --epochs 40 --batch
 ```
  will learn transformation in low dimension, save network (as classic PyTorch net and as matrixes for the following search) and transformed dataset.
 
-If you want to additionally monitor the **search** accuracy of representation, set `val_freq_search` parameter more then 0 and see `wrap/wrap_readme.txt` for additional instruction.
+If you want to additionally monitor the **search** accuracy of representation, set `val_freq_search` parameter more then 0 and see `wrap/wrap_readme.md` for additional instruction.
 
 When a transformation is learned you need to build your favorite graph for low-dimensional data.
 A possible solution is to use `search/prepare_graph.cpp`, which will use all available CPU and needed to specify '--save_knn_1k' parameter to 1 in the previous command.
