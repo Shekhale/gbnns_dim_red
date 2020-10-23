@@ -9,10 +9,6 @@ import torch.nn.functional as F
 import torch
 import itertools
 
-# import multiprocessing
-# cpus = multiprocessing.cpu_count()
-# import ray
-
 from dim_red.support_func import  loss_permutation,\
                           loss_top_1_in_lat_top_k, normalize_numpy,\
                           get_nearestneighbors, sanitize, forward_pass, Normalize,\
@@ -43,19 +39,15 @@ def triplet_optimize(xt, xv, gt_nn, xq, gt, net, args, lambda_uniform, kpos, ran
 
     # prepare optimizer
 
-    if args.optim == "sgd":
-        optimizer = optim.SGD(net.parameters(), lr_schedule[0], momentum=args.momentum)
-    elif args.optim == "adam":
-        optimizer = optim.Adam(net.parameters(), lr=0.0001)
+    optimizer = optim.SGD(net.parameters(), lr_schedule[0], momentum=args.momentum)
     pdist = nn.PairwiseDistance(2)
 
     all_logs = []
     for epoch in range(args.epochs):
         # Update learning rate
         args.lr = lr_schedule[epoch]
-        if args.optim == "sgd":
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = args.lr
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = args.lr
 
         t0 = time.time()
 
@@ -74,7 +66,6 @@ def triplet_optimize(xt, xv, gt_nn, xq, gt, net, args, lambda_uniform, kpos, ran
         # training pass
         print("  Train")
         net.train()
-        # net_for_query.train()
         avg_triplet, avg_uniform, avg_loss = 0, 0, 0
         offending = idx_batch = 0
 
@@ -156,13 +147,8 @@ def triplet_optimize(xt, xv, gt_nn, xq, gt, net, args, lambda_uniform, kpos, ran
         t3 = time.time()
 
         # synthetic logging
-        print ('epoch %d, times: [hn %.2f s epoch %.2f s val %.2f s]'
-               ' lr = %f'
-               ' loss = %g = %g + lam * %g, offending %d' % (
-            epoch, t1 - t0, t2 - t1, t3 - t2,
-            args.lr,
-            avg_loss, avg_triplet, avg_uniform, offending
-        ))
+        print('epoch %d, times: [hn %.2f s epoch %.2f s val %.2f s] lr = %f loss = %g = %g + lam * %g, offending %d' %
+                (epoch, t1 - t0, t2 - t1, t3 - t2, args.lr, avg_loss, avg_triplet, avg_uniform, offending))
 
         logs['times'] = (t1 - t0, t2 - t1, t3 - t2)
 
@@ -229,7 +215,7 @@ if __name__ == '__main__':
 
     print(args)
 
-    name_for_c = "naive_triplet"
+    name_for_c = "naive"
     results_file_name = "/home/shekhale/results/nns_graphs/" + args.database + "/train_results_" + name_for_c + ".txt"
     if args.print_results > 0:
         with open(results_file_name, "a") as rfile:
@@ -263,8 +249,6 @@ if __name__ == '__main__':
 
     print ("computing training ground truth")
     xt_gt = get_nearestneighbors_partly(xt, xt, r_pos, device=args.device, bs=10**5, needs_exact=True)
-    # xt_gt = get_nearestneighbors(xt, xt, r_pos, device=args.device, needs_exact=True)
-    # xt_gt = get_nearestneighbors(xb, xb, r_pos, device=args.device)
 
     print ("build network")
     net = nn.Sequential(
@@ -304,12 +288,15 @@ if __name__ == '__main__':
                  log['times'][0], log['times'][1], log['times'][2]))
             rfile.write("------------------------------------------------------ \n")
 
+        modelPath = "/mnt/data/shekhale/models/nns_graphs/" + args.database + "/" + args.database
         k_nn = get_nearestneighbors_partly(xb, xb, 1000, args.device, bs=3*10**5, needs_exact=True)
-        write_ivecs("/mnt/data/shekhale/models/nns_graphs/" + args.database + "/knn_1k.ivecs", k_nn)
+        write_ivecs(modelPath + "_knn_1k.ivecs", k_nn)
 
         k_nn_latent = get_nearestneighbors_partly(yb, yb, 1000, args.device, bs=3*10**5, needs_exact=True)
-        write_ivecs("/mnt/data/shekhale/models/nns_graphs/" + args.database + "/knn_lat_1k_" + name_for_c + ".ivecs", k_nn_latent)
+        write_ivecs(modelPath + "_knn_low_1k_" + name_for_c + ".ivecs", k_nn_latent)
 
-        save_transformed_data(xb, net, args.database + "/" + args.database + "_base_" + name_for_c + ".fvecs", args.device)
-        save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + name_for_c + ".fvecs", args.device)
+        save_transformed_data(xb, net, args.database + "/" + args.database + "_base_" + name_for_c + ".fvecs",
+                              args.device)
+        save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + name_for_c + ".fvecs",
+                              args.device)
 

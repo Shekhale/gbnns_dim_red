@@ -4,6 +4,7 @@ import numpy as np
 from torch import nn, optim
 import torch.nn.functional as F
 import torch
+import itertools
 
 from dim_red.support_func import  forward_pass, Normalize, stopping_time,\
     repeat, get_nearestneighbors_partly, save_transformed_data, ifelse,\
@@ -44,10 +45,6 @@ def angular_optimize(xt, xv, xq, net, args, lambda_uniform, lambda_triplet, lamb
     print("Lr schedule", lr_schedule)
 
     n = xt.shape[0]
-    # kpos = 5
-    # kneg = 10
-    # kpos = int(knn.shape[1] / 2)
-    # kneg = knn.shape[1]
     xt_var = torch.from_numpy(xt).to(args.device)
     acc =[]
     valid_char = ""
@@ -105,7 +102,6 @@ def angular_optimize(xt, xv, xq, net, args, lambda_uniform, lambda_triplet, lamb
             # do the forward pass (+ record gradients)
             yt_cur = net(xt_cur)
             pos, neg = net(pos), net(neg)
-            # ins, pos, neg = net(ins), net(pos), net(neg)
 
             # triplet loss
             per_point_loss = pdist(yt_cur, pos) - pdist(yt_cur, neg)
@@ -126,14 +122,12 @@ def angular_optimize(xt, xv, xq, net, args, lambda_uniform, lambda_triplet, lamb
             loss_uniform = uniform_loss(yt_cur)
 
             # combined loss
-            # loss = loss_triplet + lambda_uniform * loss_uniform
             loss = lambda_ang * loss_ang + lambda_uniform * loss_uniform + lambda_triplet * loss_triplet
 
             # collect some stats
             avg_ang += loss_ang.data.item()
             avg_triplet += loss_triplet.data.item()
             avg_uniform += loss_uniform.data.item()
-            # avg_uniform_2 += loss_uniform_2.data.item()
             avg_loss += loss.data.item()
 
             optimizer.zero_grad()
@@ -232,15 +226,8 @@ def train_angular(xb, xt, xv, xq, args, results_file_name, perm):
         lambdas_uni = [0.1]
         dataset_first_letter = "w"
 
-    learning_params = []
-    for dint in dints:
-        for k_pos in ranks_pos:
-            for k_neg in ranks_neg:
-                for lambda_uniform in lambdas_uni:
-                    for lambda_triplet in lambdas_triplet:
-                        for lambda_ang in lambdas_ang:
-                            for rgs in random_graph_sizes:
-                                learning_params.append((lambda_uniform, lambda_triplet, lambda_ang, dint, k_pos, k_neg, rgs))
+    learning_params = list(itertools.product(lambdas_uni, lambdas_triplet, lambdas_ang, dints, ranks_pos, ranks_neg,
+                                             random_graph_sizes))
     print(learning_params)
 
     for lambda_uniform, lambda_triplet, lambda_ang, dint, k_pos, k_neg, rgs in learning_params:

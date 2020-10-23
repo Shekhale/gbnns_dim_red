@@ -4,6 +4,7 @@ import numpy as np
 from torch import nn, optim
 import torch.nn.functional as F
 import torch
+import itertools
 
 
 from dim_red.support_func import  loss_permutation, loss_top_1_in_lat_top_k, normalize_numpy,\
@@ -170,7 +171,6 @@ def train_triplet(xb, xt, xv, xq, args, results_file_name):
 
     lambdas = ifelse(args.lambda_uniform, list(np.logspace(-2, 0, 3)))
     dints = ifelse(args.dint, [512])
-    hnsw_name = "M18_ef2000_onelevel1"
     ranks_pos = [5]
     ranks_neg = [10]
     dataset_first_letter = args.database[0]
@@ -178,20 +178,13 @@ def train_triplet(xb, xt, xv, xq, args, results_file_name):
         ranks_pos = [5]
         ranks_neg = [10]
         lambdas = [0.01]
-        hnsw_name = "M18_ef2000_onelevel1"
     elif args.database == "glove":
         ranks_pos = [5]
         ranks_neg = [40]
         lambdas = [0.01]
-        hnsw_name = "M20_ef2000"
         dataset_first_letter = "w"
 
-    learning_params = []
-    for dint in dints:
-        for r_pos in ranks_pos:
-            for r_neg in ranks_neg:
-                for lambda_uniform in lambdas:
-                    learning_params.append((lambda_uniform, dint, r_pos, r_neg))
+    learning_params = list(itertools.product(lambdas, dints, ranks_pos, ranks_neg))
 
     print(learning_params)
 
