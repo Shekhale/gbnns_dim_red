@@ -175,12 +175,14 @@ def angular_optimize(xt, xv, xq, net, args, lambda_uniform, lambda_triplet, lamb
             net.eval()
             dim = xt.shape[1]
             yt = forward_pass(net, xt, 1024)
-            knn_low_path = "/mnt/data/shekhale/models/nns_graphs/" + args.database + "/knn_1k_" + net_style + valid + ".ivecs"
+            knn_low_path = "/mnt/data/shekhale/models/nns_graphs/" + args.database +\
+                           "/knn_1k_" + net_style + valid + ".ivecs"
             get_nearestneighbors_partly(yt, yt, 1000, args.device, bs=3 * 10 ** 5, needs_exact=True, path=knn_low_path)
             save_transformed_data(xt, net, args.database + "/" + args.database + "_base_" + net_style + valid + ".fvecs",
                                   args.device)
             if len(valid) > 0:
-                save_transformed_data(xv, net, args.database + "/" + args.database + "_query_" + net_style + valid + ".fvecs",
+                save_transformed_data(xv, net,
+                                      args.database + "/" + args.database + "_query_" + net_style + valid + ".fvecs",
                                       args.device)
             else:
                 save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + net_style + ".fvecs",
@@ -284,14 +286,16 @@ def train_angular(xb, xt, xv, xq, args, results_file_name, perm):
 
                 log = all_logs[-1]
                 rfile.write(
-                    "last perm = %.4f, train_top1_k = %.3f,  valid_top1_k = %.3f, query_top1_k = %.3f, query_top1_2k = %.3f \n" %
+                    "last perm = %.4f, train_top1_k = %.3f,  valid_top1_k = %.3f, query_top1_k = %.3f,"
+                    " query_top1_2k = %.3f \n" %
                     (log['perm'], log['train_top1_k'], log['valid_top1_k'], log['query_top1_k'],
                      log['query_top1_2k']))
 
                 rfile.write(
-                    "last logs: epochs %d, loss_uniform = %.6f, loss_triplet = %.6f, loss_ang = %.6f, loss = %.6f, offending = %d, times %f %f %f \n" %
-                    (log['epoch'] + 1, log['loss_uniform'],  log['loss_triplet'], log['loss_ang'], log['loss'], log['offending'],
-                     log['times'][0], log['times'][1], log['times'][2]))
+                    "last logs: epochs %d, loss_uniform = %.6f, loss_triplet = %.6f, loss_ang = %.6f, loss = %.6f,"
+                    " offending = %d, times %f %f %f \n" %
+                    (log['epoch'] + 1, log['loss_uniform'],  log['loss_triplet'], log['loss_ang'], log['loss'],
+                     log['offending'], log['times'][0], log['times'][1], log['times'][2]))
                 if args.val_freq_search > 0:
                     rfile.write("Acc list: ")
                     rfile.write(' '.join([str(e) for e in log['acc']]))
@@ -305,13 +309,16 @@ def train_angular(xb, xt, xv, xq, args, results_file_name, perm):
                 knn_low_path = models_path + "_knn_1k_" + net_style + ".ivecs"
                 get_nearestneighbors_partly(yb, yb, 1000, args.device, bs=3*10**5, needs_exact=True, path=knn_low_path)
 
-            gt_low_path = "/mnt/data/shekhale/data/" + args.database + "/" + args.database + "_groundtruth_" + net_style + ".ivecs"
+            gt_low_path = "/mnt/data/shekhale/data/" + args.database + "/" +\
+                          args.database + "_groundtruth_" + net_style + ".ivecs"
             get_nearestneighbors_partly(yq, yb, 100, args.device, bs=3*10**5, needs_exact=True, path=gt_low_path)
 
-            save_transformed_data(xb, net, args.database + "/" + args.database + "_base_" + net_style + ".fvecs", args.device)
-            save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + net_style + ".fvecs", args.device)
+            save_transformed_data(xb, net, args.database + "/" + args.database + "_base_" + net_style + ".fvecs",
+                                  args.device)
+            save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + net_style + ".fvecs",
+                                  args.device)
 
-# -------------------------------------------------------------------------------------------------------------------
+# -------------------------  SAVING PART  --------------------------------------------------------------------
 
         params_string = str(dout) + "_l_" + str(int(-np.log10(lambda_uniform))) + "_1m_" + str(k_pos) + "_" + \
             str(k_neg) + "_w_" + str(dint) + "_e_" + str(args.epochs)

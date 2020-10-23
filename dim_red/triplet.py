@@ -9,7 +9,7 @@ import itertools
 
 from dim_red.support_func import  loss_permutation, loss_top_1_in_lat_top_k, normalize_numpy,\
     get_nearestneighbors, sanitize, forward_pass, Normalize, stopping_time,\
-    repeat, pairwise_NNs_inner,get_nearestneighbors_partly, save_transformed_data, ifelse, validation_function,\
+    repeat, pairwise_NNs_inner, get_nearestneighbors_partly, save_transformed_data, ifelse, validation_function,\
     save_net_as_matrix
 
 from dim_red.data import write_fvecs, write_ivecs
@@ -237,17 +237,20 @@ def train_triplet(xb, xt, xv, xq, args, results_file_name):
                     "Triplet, DATABASE %s, xt_size = %d, batch_size = %d, lat_dim = %d\n" %
                     (args.database, xt.shape[0], args.batch_size, args.dout))
                 rfile.write(
-                    "k = %d, lam_u = %.7f, r_pos = %d, r_neg = %d , dint = %d, margin = %.5f, net_state_dict_size = %d \n" %
+                    "k = %d, lam_u = %.7f, r_pos = %d, r_neg = %d , dint = %d, margin = %.5f,"
+                    " net_state_dict_size = %d \n" %
                     (val_k, lambda_uniform, k_pos, k_neg, dint, margin, len(list(net.state_dict().keys()))))
 
                 log = all_logs[-1]
                 rfile.write(
-                    "last perm = %.4f, train_top1_k = %.3f,  valid_top1_k = %.3f, query_top1_k = %.3f, query_top1_2k = %.3f \n" %
+                    "last perm = %.4f, train_top1_k = %.3f,  valid_top1_k = %.3f, query_top1_k = %.3f,"
+                    " query_top1_2k = %.3f \n" %
                     (log['perm'], log['train_top1_k'], log['valid_top1_k'], log['query_top1_k'],
                      log['query_top1_2k']))
 
                 rfile.write(
-                    "last logs: epochs %d, loss_uniform = %.6f, loss_triplet = %.6f, loss = %.6f, offending = %d, times %f %f %f \n" %
+                    "last logs: epochs %d, loss_uniform = %.6f, loss_triplet = %.6f, loss = %.6f, offending = %d,"
+                    " times %f %f %f \n" %
                     (log['epoch'] + 1, log['loss_uniform'], log['loss_triplet'], log['loss'], log['offending'],
                      log['times'][0], log['times'][1], log['times'][2]))
                 if args.val_freq_search > 0:
@@ -264,13 +267,16 @@ def train_triplet(xb, xt, xv, xq, args, results_file_name):
                 knn_low_path = models_path + "_knn_1k_" + net_style + ".ivecs"
                 get_nearestneighbors_partly(yb, yb, 1000, args.device, bs=3*10**5, needs_exact=True, path=knn_low_path)
 
-            gt_low_path = "/mnt/data/shekhale/data/" + args.database + "/" + args.database + "_groundtruth_" + net_style + ".ivecs"
+            gt_low_path = "/mnt/data/shekhale/data/" + args.database + "/"\
+                          + args.database + "_groundtruth_" + net_style + ".ivecs"
             get_nearestneighbors_partly(yq, yb, 100, args.device, bs=3*10**5, needs_exact=True, path=gt_low_path)
 
-            save_transformed_data(xb, net, args.database + "/" + args.database + "_base_" + net_style + ".fvecs", args.device)
-            save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + net_style + ".fvecs", args.device)
+            save_transformed_data(xb, net, args.database + "/" + args.database + "_base_" + net_style + ".fvecs",
+                                  args.device)
+            save_transformed_data(xq, net, args.database + "/" + args.database + "_query_" + net_style + ".fvecs",
+                                  args.device)
 
-# -------------------------------------------------------------------------------------------------------------------
+# -------------------------  SAVING PART  --------------------------------------------------------------------
 
         params_string = str(dout) + "_l_" + str(int(-np.log10(lambda_uniform))) + "_1m_" + str(k_pos) + "_" + \
             str(k_neg) + "_w_" + str(dint) + "_e_" + str(args.epochs)

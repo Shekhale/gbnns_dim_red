@@ -273,17 +273,20 @@ if __name__ == '__main__':
         with open(results_file_name, "a") as rfile:
             rfile.write("\n")
             rfile.write(
-                "Triplet, DATABASE %s, xt_size = %d, batch_size = %d, lat_dim = %d, k = %d, lam_u = %.5f, r_pos = %d, r_neg = %d , dint = %d, optim %s, margin = %.5f \n" %
+                "Triplet, DATABASE %s, xt_size = %d, batch_size = %d, lat_dim = %d, k = %d, lam_u = %.5f, r_pos = %d,"
+                " r_neg = %d , dint = %d, optim %s, margin = %.5f \n" %
                 (args.database, xt.shape[0], args.batch_size, args.dout, val_k, lam, r_pos, r_neg, dint, args.optim, 0))
             # rfile.write("\n")
             log = all_logs[-1]
             rfile.write(
-                "last perm = %.4f, train_top1_k = %.3f,  valid_top1_k = %.3f, query_top1_k = %.3f, query_top1_2k = %.3f \n" %
+                "last perm = %.4f, train_top1_k = %.3f,  valid_top1_k = %.3f, query_top1_k = %.3f,"
+                " query_top1_2k = %.3f \n" %
                 (log['perm'], log['train_top1_k'], log['valid_top1_k'], log['query_top1_k'],
                  log['query_top1_2k']))
 
             rfile.write(
-                "last logs: epochs %d, loss_uniform = %.6f, loss_triplet = %.6f, loss = %.6f, offending = %d, times %f %f %f \n" %
+                "last logs: epochs %d, loss_uniform = %.6f, loss_triplet = %.6f, loss = %.6f, offending = %d,"
+                " times %f %f %f \n" %
                 (log['epoch'] + 1, log['loss_uniform'], log['loss_triplet'], log['loss'], log['offending'],
                  log['times'][0], log['times'][1], log['times'][2]))
             rfile.write("------------------------------------------------------ \n")
