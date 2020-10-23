@@ -1,29 +1,6 @@
-#include <random>
-#include <iostream>
-#include <fstream>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <unordered_map>
-#include <unordered_set>
-#include <map>
-#include <cmath>
-#include <ctime>
-#include <queue>
-#include <vector>
-#include <omp.h>
-
 
 #include <chrono>
-
-#include <limits>
-#include <sys/time.h>
-
-
-#include <algorithm>
-#include <ctime>
-
-
+#include<set>
 #include "support_func.h"
 
 using namespace std;
@@ -78,13 +55,13 @@ void KLgraph::BuildByNumber(int l, vector<float> dataset, size_t N, size_t d, st
     for(int i=0; i < N; ++i) {
         int num;
         const float *point_i = dataset.data() + i*d;
-        vector<neighbor> chosen_neigs;
-        set<neighbor> chn_neigs;
+        vector<Neighbor> chosen_neigs;
+        set<Neighbor> chn_neigs;
         for (int j = 0; j < N; ++j) {
             if (i != j) {
                 const float *point_j = dataset.data() + j * d;
                 float dist = metric->Dist(point_i, point_j, d);
-                neighbor neig{j, dist};
+                Neighbor neig{j, dist};
                 chosen_neigs.push_back(neig);
             }
         }
@@ -122,8 +99,8 @@ void KLgraph::BuildByNumberCustom(int l, vector<float> dataset, size_t N, size_t
     for(int i=0; i < N; ++i) {
         int num;
         const float *point_i = dataset.data() + i * d;
-        vector<neighbor> chosen_neigs;
-        set<neighbor> chn_neigs;
+        vector<Neighbor> chosen_neigs;
+        set<Neighbor> chn_neigs;
 
         while (chn_neigs.size() < sqrtN) {
             num = uniform_distr(random_gen);
@@ -131,7 +108,7 @@ void KLgraph::BuildByNumberCustom(int l, vector<float> dataset, size_t N, size_t
             if (num != i) {
                 const float *point_num = dataset.data() + num * d;
                 float dist = metric->Dist(point_i, point_num, d);
-                neighbor neig{num, dist};
+                Neighbor neig{num, dist};
                 chn_neigs.insert(neig);
             }
         }
@@ -155,6 +132,7 @@ void KLgraph::BuildByNumberCustom(int l, vector<float> dataset, size_t N, size_t
     }
 }
 
+
 void KLgraph::BuildByDist(int l, vector<float> dataset, size_t N, size_t d, std::mt19937 random_gen,
                     Metric *metric){
     L = l;
@@ -168,13 +146,13 @@ void KLgraph::BuildByDist(int l, vector<float> dataset, size_t N, size_t d, std:
     for(int i=0; i < N; ++i) {
         int num;
         const float *point_i = dataset.data() + i*d;
-        vector<neighbor> chosen_neigs;
+        vector<Neighbor> chosen_neigs;
         for (int j = 0; j < N; ++j) {
             if (i != j) {
                 const float *point_j = dataset.data() + j * d;
                 float dist = metric->Dist(point_i, point_j, d);
                 if (dist > thr) {
-                    neighbor neig{j, dist};
+                    Neighbor neig{j, dist};
                     chosen_neigs.push_back(neig);
                 }
             }
