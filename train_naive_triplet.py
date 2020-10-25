@@ -222,16 +222,12 @@ if __name__ == '__main__':
             rfile.write("\n\n")
             rfile.write("START TRAINING \n")
 
-    dint = args.dint
-    dout = args.dout
-    r_pos = args.rank_positive
-    r_neg = args.rank_negative
-    lam = args.lambda_uniform
     print ("load dataset %s" % args.database)
     (_, xb, xq, gt) = load_dataset(args.database, args.device, size=args.size_base, test=False, mnt=True)
 
     base_size = xb.shape[0]
     dim = xb.shape[1]
+    lam = args.lambda_uniform
     xt = xb
 
     # GIST's vectors have different norm
@@ -248,24 +244,24 @@ if __name__ == '__main__':
     xq = sanitize(xq)
 
     print ("computing training ground truth")
-    xt_gt = get_nearestneighbors_partly(xt, xt, r_pos, device=args.device, bs=10**5, needs_exact=True)
+    xt_gt = get_nearestneighbors_partly(xt, xt, args.rank_positive, device=args.device, bs=10**5, needs_exact=True)
 
     print ("build network")
     net = nn.Sequential(
-        nn.Linear(in_features=dim, out_features=dint, bias=True),
-        nn.BatchNorm1d(dint),
+        nn.Linear(in_features=dim, out_features=args.dint, bias=True),
+        nn.BatchNorm1d(args.dint),
         nn.ReLU(),
-        nn.Linear(in_features=dint, out_features=dint, bias=True),
-        nn.BatchNorm1d(dint),
+        nn.Linear(in_features=args.dint, out_features=args.dint, bias=True),
+        nn.BatchNorm1d(args.dint),
         nn.ReLU(),
-        nn.Linear(in_features=dint, out_features=dout, bias=True),
+        nn.Linear(in_features=args.dint, out_features=args.dout, bias=True),
         Normalize()
     )
 
     net.to(args.device)
 
     val_k = 2 * args.dout
-    all_logs = triplet_optimize(xt, xt, xt_gt, xq, gt, net, args, lam, r_pos, r_neg, val_k, 0)
+    all_logs = triplet_optimize(xt, xt, xt_gt, xq, gt, net, args, lam, args.rank_positive, args.rank_negative, val_k, 0)
 
     yb = forward_pass(net, xb, 1024)
 
@@ -275,7 +271,8 @@ if __name__ == '__main__':
             rfile.write(
                 "Triplet, DATABASE %s, xt_size = %d, batch_size = %d, lat_dim = %d, k = %d, lam_u = %.5f, r_pos = %d,"
                 " r_neg = %d , dint = %d, optim %s, margin = %.5f \n" %
-                (args.database, xt.shape[0], args.batch_size, args.dout, val_k, lam, r_pos, r_neg, dint, args.optim, 0))
+                (args.database, xt.shape[0], args.batch_size, args.dout, val_k, lam, args.rank_positive,
+                 args.rank_negative, args.dint, args.optim, 0))
             # rfile.write("\n")
             log = all_logs[-1]
             rfile.write(
