@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
 
     string output_s = "/home/shekhale/results/nns_graphs/" + datasetName + "/naive_results_" + datasetName + ".txt";
     const char *output = output_s.c_str();
-    remove(output_txt);
+    remove(output);
 
     bool klExist = checkFileExistence(kl_dir);
     if (klExist != true) {

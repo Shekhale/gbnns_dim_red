@@ -316,9 +316,8 @@ void performRealTests(int n, int d, int d_low, int n_q, int n_tr, vector<int> ef
 }
 
 
-void performMatrixTest(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> > &kl_graph,
-                  vector<float> &ds,  vector<float> &queries, vector<float> &ds_low, vector<float> &matrix_1,
-                  vector<float> &matrix_2, vector<float> &matrix_3, size_t d_hidden,
+void performNetTest(vector<vector<uint32_t> > &knn_graph, vector<vector<uint32_t> > &kl_graph,
+                  vector<float> &ds,  vector<float> &queries, vector<float> &ds_low, const Net* net, size_t d_hidden,
                   vector<uint32_t> &truth,
                   int n, int d, int d_low, int n_q, int n_tr, int ef, int k, string graph_name,
                   Metric *metric, const char* output_txt,
@@ -353,8 +352,7 @@ void performMatrixTest(vector<vector<uint32_t> > &knn_graph, vector<vector<uint3
 //            const float* point_q_low = queries_low.data() + i * d_low;
             if (d != d_low) {
                 vector<float> queries_low(d_low);
-                GetLowQueryFromNet(matrix_1.data(), matrix_2.data(), matrix_3.data(), point_q, queries_low,
-                                         zeros.data(), d, d_hidden, d_hidden, d_low, &ang, &l2);
+                GetLowQueryFromNet(net, point_q, queries_low, zeros.data(), d, d_hidden, d_hidden, d_low, &ang, &l2);
 //                const float* point_q_low = queries_low.data();
 				if (recheck_size > 0) {
 	                tripletResult = getOneSearchResults(queries_low.data(), ds_low.data(), n, d_low, knn_graph,
@@ -410,10 +408,9 @@ void performMatrixTest(vector<vector<uint32_t> > &knn_graph, vector<vector<uint3
 }
 
 
-void performRealMatrixTests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs, std::mt19937 random_gen,
+void performRealNetTests(int n, int d, int d_low, int n_q, int n_tr, vector<int> efs, std::mt19937 random_gen,
                 vector< vector<uint32_t> > &main_graph, vector< vector<uint32_t> > &kl, vector<float> &db,
-                vector<float> &queries, vector<float> &db_low, vector<float> &matrix_1, vector<float> &matrix_2,
-                vector<float> &matrix_3, size_t d_hidden, vector<uint32_t> &truth,
+                vector<float> &queries, vector<float> &db_low, const Net* net, size_t d_hidden, vector<uint32_t> &truth,
                 const char* output_txt, Metric *metric,
                 string graph_name, bool use_second_graph, bool llf, int number_exper, int number_of_threads) {
 
@@ -432,8 +429,7 @@ void performRealMatrixTests(int n, int d, int d_low, int n_q, int n_tr, vector<i
     uint32_t hops_bound = 50;
 
     for (int i=0; i < efs.size(); ++i) {
-        performMatrixTest(main_graph, kl, db, queries, db_low, matrix_1, matrix_2, matrix_3, d_hidden, truth,
-                          n, d, d_low,
+        performNetTest(main_graph, kl, db, queries, db_low, net, d_hidden, truth, n, d, d_low,
                           n_q, n_tr, efs[i], 1, graph_name, metric, output_txt, inter_points, use_second_graph,
                           llf, hops_bound, 0, efs[i], number_exper, number_of_threads);
     }

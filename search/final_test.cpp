@@ -66,26 +66,26 @@ int main(int argc, char **argv) {
 
     string pathNets = pathModels + "/" + datasetName + "_net_as_matrix";
     string pathARNets =  pathNets + "_angular_optimal";
-    vector<float> matrix_ar_1 = loadXvecs<float>(pathARNets + "_1.fvecs", d + 1, d_hidden);
-    vector<float> matrix_ar_2 = loadXvecs<float>(pathARNets + "_2.fvecs", d_hidden + 1, d_hidden);
-    vector<float> matrix_ar_3 = loadXvecs<float>(pathARNets + "_3.fvecs", d_hidden + 1, d_low);
 
     int numberExper = 5;
     int numberThreads = 1;
 
+    Net net;
+    net.layerFirst = loadXvecs<float>(pathARNets + "_1.fvecs", d + 1, d_hidden);
+    net.layerSecond = loadXvecs<float>(pathARNets + "_2.fvecs", d_hidden + 1, d_hidden);
+    net.layerFinal = loadXvecs<float>(pathARNets + "_3.fvecs", d_hidden + 1, d_low);
 
 // -----------------------   SEARCHING PROCEDURE  ------------------------------
 
     string output_s = "/home/shekhale/results/nns_graphs/" + datasetName + "/final_results_" + datasetName + ".txt";
     const char *output = output_s.c_str();
-    remove(output_txt);
+    remove(output);
 
     performRealTests(n, d, d, n_q, n_tr, efs_hnsw_origin, random_gen, hnsw, hnsw, db, queries, db, queries,
                      truth, output, &l2, "hnsw", false, false, numberExper, numberThreads);
 
-    performRealMatrixTests(n, d, d_low, n_q, n_tr, efs, random_gen, hnsw_ar, hnsw_ar, db, queries, db_ar,
-                           matrix_ar_1, matrix_ar_2, matrix_ar_3, d_hidden,
-                           truth, output, &l2, "hnsw_new_ar", false, false, numberExper, numberThreads);
+    performRealNetTests(n, d, d_low, n_q, n_tr, efs, random_gen, hnsw_ar, hnsw_ar, db, queries, db_ar, &net,
+                           d_hidden, truth, output, &l2, "hnsw_new_ar", false, false, numberExper, numberThreads);
 
     return 0;
 

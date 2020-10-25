@@ -43,9 +43,9 @@ float getEps() {
 }
 
 struct Net {
-    vector<float> matrixFirst;
-    vector<float> matrixSecond;
-    vector<float> matrixFinal;
+    vector<float> layerFirst;
+    vector<float> layerSecond;
+    vector<float> layerFinal;
 };
 
 struct Neighbor {
@@ -642,17 +642,16 @@ void normalizeVector(vector<float> &input, const float* zeros, int d, Metric *l2
 }
 
 
-void GetLowQueryFromNet(const float* matrix_1,  const float* matrix_2, const float* matrix_3,
-                              const float* query, vector<float> &ans, const float* zeros,
-                              size_t d, size_t d_hidden, size_t d_hidden_2, size_t d_low, Metric *ang, Metric *l2) {
+void GetLowQueryFromNet(const Net* net, const float* query, vector<float> &ans, const float* zeros,
+                        size_t d, size_t d_hidden, size_t d_hidden_2, size_t d_low, Metric *ang, Metric *l2) {
 
     vector<float> hidden_layer(d_hidden);
-    computeNetLayer(matrix_1, query, hidden_layer, true, d + 1, d, d_hidden, ang);
+    computeNetLayer(net->layerFirst.data(), query, hidden_layer, true, d + 1, d, d_hidden, ang);
 
     vector<float> hidden_2_layer(d_hidden_2);
-    computeNetLayer(matrix_2, hidden_layer.data(), hidden_2_layer, true, d_hidden + 1, d_hidden, d_hidden_2, ang);
+    computeNetLayer(net->layerSecond.data(), hidden_layer.data(), hidden_2_layer, true, d_hidden + 1, d_hidden, d_hidden_2, ang);
 
-    computeNetLayer(matrix_3, hidden_2_layer.data(), ans, false, d_hidden_2 + 1, d_hidden_2, d_low, ang);
+    computeNetLayer(net->layerFinal.data(), hidden_2_layer.data(), ans, false, d_hidden_2 + 1, d_hidden_2, d_low, ang);
 
     normalizeVector(ans, zeros, d_low, l2);
 
